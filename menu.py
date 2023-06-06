@@ -19,13 +19,13 @@ class Menu:
 #     def show_menu(self,menu):
 #         self.displayO.show_menu(menu)
         
-    def go_home(self):        
+    def go_home(self,wifi):        
         self.displayO.oled.fill(0)
-        self.displayO.show_header("Home")
+        self.displayO.show_header("Home",wifi)
         self.displayO.show_frame()
         self.displayO.show_height_frame(str(self.calibrationO.real_height(self.motorO.counter)))
         
-    def move_menu_encoder(self,step_pin,direction_pin,menu_list,header):
+    def move_menu_encoder(self,step_pin,direction_pin,menu_list,header,wifi):
         list_length = len(menu_list)
         tot = min(list_length,self.total_lines)
         if self.previous_value != step_pin.value():
@@ -45,7 +45,7 @@ class Menu:
                     else: 
                         if self.shift+tot < list_length:
                             self.shift += 1
-                self.displayO.show_menu(menu_list,self.line, self.highlight, self.shift,tot,header)
+                self.displayO.show_menu(menu_list,self.line, self.highlight, self.shift,tot,header,wifi)
             self.previous_value = step_pin.value()
             
     def move_menu_buttons(self, direction, menu_list,header):
@@ -63,7 +63,7 @@ class Menu:
             else: 
                 if self.shift+tot < list_length:
                     self.shift += 1
-        self.displayO.show_menu(menu_list,self.line, self.highlight, self.shift,tot,header)
+        self.displayO.show_menu(menu_list,self.line, self.highlight, self.shift,tot,header,wifi)
     
 #     def move_menu_buttons(self,button,up_button,menu_list): 
 #         list_length = len(menu_list)

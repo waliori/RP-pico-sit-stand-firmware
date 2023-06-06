@@ -2,7 +2,7 @@ import json
 import utime
 import math
 class Calibration:
-    def __init__(self,displayO,motorO,sLock):
+    def __init__(self,displayO,motorO,sLock,wifi):
         self.idle_state = False
         self.calibrated = False
         self.real_calibrated = False
@@ -11,6 +11,7 @@ class Calibration:
         self.speed_calibrated = False
         self.displayO = displayO
         self.motorO = motorO
+        self.wifi = wifi
         self.max_encoder = 0
         self.min_encoder = 0
         self.max_real = 0
@@ -23,6 +24,7 @@ class Calibration:
 #         self.height_value = 0
 #         self.height_previousValue = 1
 #         self.min_height = 0
+        print(self.wifi)
         try:    
             settings = open("settings.json","r")
             settings_json = json.loads(settings.read())
@@ -39,7 +41,7 @@ class Calibration:
             self.real_calibrated = True
             self.speed_calibrated = True
             self.displayO.oled.fill(0)
-            self.displayO.show_header("Home")
+            self.displayO.show_header("Home",self.wifi)
             self.displayO.show_frame()
         except:
             self.idle_state = False
@@ -48,7 +50,7 @@ class Calibration:
             file.write(json.dumps({}))
             self.sLock.release()
             self.displayO.oled.fill(0)
-            self.displayO.show_header("Calibration")
+            self.displayO.show_header("Calibration",self.wifi)
             self.displayO.show_frame()
             self.displayO.text_frame("Go to HIGHEST position (UP), to confirm long clik (KNOB)")
             
@@ -113,7 +115,7 @@ class Calibration:
         self.displayO.text_frame("Done! Exiting to Main Screen...")        
         utime.sleep(1)
         self.displayO.oled.fill(0)
-        self.displayO.show_header("Home")
+        self.displayO.show_header("Home",self.wifi)
         self.displayO.show_frame()
         self.sLock.release()
     
@@ -132,7 +134,7 @@ class Calibration:
         self.displayO.text_frame("Done! Exiting to Main Screen...")        
         utime.sleep(1)
         self.displayO.oled.fill(0)
-        self.displayO.show_header("Home")
+        self.displayO.show_header("Home",self.wifi)
         self.displayO.show_frame()
         self.sLock.release()
         self.idle_state = True

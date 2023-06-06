@@ -5,9 +5,13 @@ import uasyncio as asyncio
 from microdot_asyncio import redirect
 import machine
 # import socket
-class Wifi:
-    def __init__(self,app,sLock):
+
+y_ico = bytearray(b'\xff\xff\xff\xff\xf8\x1f\xe3\xc7\xcf\xf3\xfe\x7f\xf8\x1f\xf7\xef\xff\xff\xfe\x7f\xfe\x7f\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00')
+n_ico = bytearray(b'\xff\xff\x98\x1f\xc1\x87\xf7\xf1\xbb\xfd\xfc\x1f\xf6\x0f\xe7\x27\xff\xdf\xfe\x67\xfe\x73\xfe\x79\xff\xff\x00\x00\x00\x00\x00\x00')
+class Wifi:    
+    def __init__(self,app,sLock,displayO):
         self.sLock = sLock
+        self.displayO = displayO
         self.wlan = network.WLAN(network.STA_IF)
         self.wlan.active(True)
         self.wlan.config(pm = 0xa11140)
@@ -24,8 +28,11 @@ class Wifi:
         self.apmode = False
         self.open = False
         self.nearby = []
-        self.connecting = False
-        
+        if self.wlan.isconnected():
+            self.wifi = y_ico
+        else:
+            self.wifi = n_ico
+           
 #         self.saved                
         try:
             self.sLock.acquire()
@@ -63,7 +70,7 @@ class Wifi:
     async def start_connection(self):
         if self.wlan.isconnected():
             self.connected = True
-            self.connecting = False
+            self.wifi = y_ico
             print("already connected to ", self.wlan.ifconfig())
             machine.soft_reset()
         try:
@@ -180,22 +187,34 @@ class Wifi:
         
     def disconnect(self):
         self.wlan.disconnect()
+        self.wifi = n_ico        
         self.ip = ""
         self.ssid = ""
         self.connected = False
         
     def connect(self, ssid, password, retries=100, verbose = True):
+        self.sLock.acquire()
         if self.wlan.isconnected():
+            self.wifi = y_ico
             return True        
         self.string = ""
-        self.connecting = True
         self.wlan.connect(ssid, password)
         if verbose:
             self.string ='Connecting to ' + ssid
             print('Connecting to ' + ssid, end=' ')
-            
+        
+        self.displayO.oled.fill(0)
+        self.displayO.show_frame()
+        self.displayO.show_header("Wifi",self.wifi)
+        dots=""            
         while retries > 0 and self.wlan.status() != network.STAT_GOT_IP:
             retries -= 1
+            dots += "."
+            s = ["Connecting to", ssid,dots]
+            self.displayO.show_static_frame(s,len(s))        
+            self.displayO.oled.show()
+            if retries %3 == 0:
+                dots=""
             if verbose:
                 self.string += '.'
                 print('.', end='')
@@ -203,7 +222,8 @@ class Wifi:
         if self.wlan.status() == network.STAT_GOT_IP:
             self.ip = self.wlan.ifconfig()[0]
             self.ssid = ssid
-        self.connecting = False
+            self.wifi = y_ico            
+        self.sLock.release()
         return self.wlan.isconnected()
     
     async def serve(self,operation):
@@ -222,6 +242,29 @@ class Wifi:
             self.app.shutdown()
             self.server = False
             
+    #rewrite
+#     def connect(self, retries=50, verbose = True):
+#         self.string = ""
+# #         self.wlan.active(True)
+#           # Disable power-save mode
+#         self.wlan.connect(self.ssid, self.password)
+#         if verbose:
+#             self.string ='Connecting to ' + self.ssid
+#             print('Connecting to ' + self.ssid, end=' ')
+#             
+#         while retries > 0 and self.wlan.status() != network.STAT_GOT_IP:
+#             retries -= 1
+#             if verbose:
+#                 self.string += '.'
+#                 print('.', end='')
+#             time.sleep(1)    
+#             
+#         if self.wlan.status() == network.STAT_GOT_IP:
+#             self.ip = self.wlan.ifconfig()[0]
+#             print('\nConnected. Network config: ', self.wlan.ifconfig())
+#         else:
+#             print('\nFailed. Not Connected to: ' + ssid)
+#         return self.wlan.isconnected()
 
     
     

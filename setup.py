@@ -34,7 +34,7 @@ motorO = motor.Motor(relay1, relay2,current_encoder,sLock)
 motorO.stop_motor()
 
 app = Microdot()
-wifiO = wifi.Wifi(app,sLock)
+
 
 
 #buttons
@@ -57,7 +57,8 @@ outB = Pin(27, mode=Pin.IN) # Pin DT of encoder 2
 
 
 # oled display init
-displayO = display.Display(128,64,1,7,6,wifiO)
+displayO = display.Display(128,64,1,7,6)
+wifiO = wifi.Wifi(app,sLock,displayO)
 asyncio.sleep(2)
 # oled = displayO.init()
 # font_writer = writer.Writer(oled, freesans20)

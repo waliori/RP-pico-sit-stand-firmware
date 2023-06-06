@@ -45,7 +45,7 @@ def divide_phrase(phrase, max_width, avg_char_width):
     return parts
 
 class Display:
-    def __init__(self,width,height,i2c_id,scl,sda,wifiO,freq=400000):
+    def __init__(self,width,height,i2c_id,scl,sda,freq=400000):
         self.width = width
         self.height = height
         self.i2c_id = i2c_id
@@ -63,7 +63,6 @@ class Display:
         self.menu_shift = 0
         self.menu_list_length = 0
         self.menu_total_lines = 5
-        self.wifiO = wifiO
         self.lock_state = False
 
 
@@ -91,7 +90,7 @@ class Display:
         self.font_writer_20.printstring("sit/stand desk")
         self.oled.show()
         
-    def show_menu(self,menu,line, highlight, shift,total_lines,header):
+    def show_menu(self,menu,line, highlight, shift,total_lines,header,wifi):
         item = 1
         line = 1
         line_height = 10
@@ -112,7 +111,7 @@ class Display:
             else:
                 self.oled.text(item, 10, (line*line_height)+6,1)
             line += 1
-        self.show_header(header)
+        self.show_header(header,wifi)
         self.show_frame()
         self.oled.show()
     
@@ -184,12 +183,7 @@ class Display:
         self.oled.hline(x, height, width, 1)
         self.oled.vline(width, y, height+1, 1)
 
-    def show_header(self,header):
-        if self.wifiO.wlan.isconnected():
-            wifi = bytearray(b'\xff\xff\xff\xff\xf8\x1f\xe3\xc7\xcf\xf3\xfe\x7f\xf8\x1f\xf7\xef\xff\xff\xfe\x7f\xfe\x7f\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00')
-        else:
-            wifi = bytearray(b'\xff\xff\x98\x1f\xc1\x87\xf7\xf1\xbb\xfd\xfc\x1f\xf6\x0f\xe7\x27\xff\xdf\xfe\x67\xfe\x73\xfe\x79\xff\xff\x00\x00\x00\x00\x00\x00')
-                
+    def show_header(self,header,wifi):             
         fb = framebuf.FrameBuffer(wifi, 14, 14, framebuf.MONO_HLSB)
         self.draw_frame(0,0,self.width-1,self.title_height+1)
         self.oled.fill_rect(0,0,self.width-1,self.title_height+1,1)
