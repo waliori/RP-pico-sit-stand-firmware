@@ -18,7 +18,6 @@ presetsO = presets.Presets(motorO,calibrationO,sLock)
 #TODO add wifi manager (WiFi show saved and open if open is true, else no open no saved show message to launch server) 
 #TODO choose to by pass (smart) wifi etc
 #TODO add support for open wifi with user choice (default no)
-#TODO add "connecting" when first boot because no operation in table is possible why is connecting
 #TODO add screen dim/black
 #TODO forget wifi
 #TODO add go back from sub to menu
@@ -35,7 +34,7 @@ def move_motor(button,calibration=False):
 
 def show_menu(menu):
     sLock.acquire()      
-    menuO.menu_state = True
+    menuO.menu_state = True  
     menuO.reset_state = False
     menuO.presets_state = False
     calibrationO.idle_state = False
@@ -63,7 +62,8 @@ def connect_c_wifi(wifi):
         displayO.show_header("WiFi",wifiO.wifi)
         displayO.oled.show()
         asyncio.sleep(10)
-        connect_wifi()    
+        connect_wifi()
+        
 def connect_wifi():
     menuO.menu_state = False
     calibrationO.idle_state = False
@@ -72,17 +72,38 @@ def connect_wifi():
     displayO.oled.fill(0)
     displayO.show_frame()
     if wifiO.saved_json:
-        print("if")
         menuO.wc_state = True #mimic menustate
+        menuO.presets_state = False
         wifiO.nearby_wifis()
         displayO.show_menu(wifiO.nearby, line, menuO.highlight, menuO.shift,min(len(wifiO.nearby),menuO.total_lines),"Wifi",wifiO.wifi)
     else:
-        print("else")
         menuO.presets_state = True
         displayO.text_frame("Connect to PicoW:waliori123 then visit 192.168.4.1")
         displayO.show_header("WiFi",wifiO.wifi)
         displayO.oled.show()
     sLock.release()
+
+def connect_wifi2():
+    menuO.menu_state = False
+    calibrationO.idle_state = False
+    line = 1    
+    displayO.oled.fill(0)
+    displayO.show_frame()
+    displayO.show_frame()
+    if wifiO.saved_json:
+        menuO.wc_state = True #mimic menustate
+        menuO.presets_state = False
+        displayO.show_menu(wifiO.nearby, line, menuO.highlight, menuO.shift,min(len(wifiO.nearby),menuO.total_lines),"Wifi",wifiO.wifi)
+    else:
+        menuO.presets_state = True
+        displayO.text_frame("Connect to PicoW:waliori123 then visit 192.168.4.1")
+        displayO.show_header("WiFi",wifiO.wifi)
+        displayO.oled.show()
+
+#     menuO.wc_state = True #mimic menustate
+
+#     menuO.presets_state = True
+
         
         
 current_m = ".."
@@ -101,11 +122,16 @@ def go_back():
     global current_m, menu_list
     print(f"current menu {current_m}")
     if current_m in ["Show IP"]:
-        connect_wifi()
+        current_m = "WiFi"
+        connect_wifi2()
     elif current_m in ["WiFi","Lock Unlock", "Show Presets", "Show min/max", "Collision Reset", "Factory Reset"]:
         show_menu(menu_list)
     elif current_m == "..":
         go_home()
+
+def back_m():
+    global menu_list
+    show_menu(menu_list)
 
 def launch(item):
   global current_m
@@ -122,7 +148,7 @@ def launch(item):
     "Collision Reset": confirm_reset_collision,
     "Disconnect": disconnect,
     "Scan again": connect_wifi,
-    "Go back": go_back
+    "Go back": back_m
   }
   if wifiO.saved_json:
       for wf in wifiO.saved_json.keys():
@@ -274,8 +300,9 @@ def show_calibration():
     
 # @micropython.native
 def show_ip():
-    sLock.acquire()
+#     sLock.acquire()
     menuO.presets_state = True
+    menuO.wc_state = False
     menuO.menu_state = False
     calibrationO.idle_state = False
     motorO.api = False
@@ -288,7 +315,7 @@ def show_ip():
     displayO.show_static_frame(ip,len(ip))
     displayO.show_header("IP Address",wifiO.wifi)
     displayO.oled.show()
-    sLock.release()
+#     sLock.release()
     
 
 # @micropython.native   
@@ -525,7 +552,6 @@ def task_display_navigation():
                     
                 #addig to that, we display current real height and handle buttons
                 if not menuO.menu_state and not displayO.lock_state and calibrationO.speed_calibrated:
-                    print("here")
                     displayO.show_height_frame(str(calibrationO.real_height(motorO.counter)),motorO.rpm)
                     pb_up.press_func(move_motor, (up_button,))
                     pb_down.press_func(move_motor, (down_button,))
@@ -763,46 +789,7 @@ def toggle_server(loop,operation):
             res.headers["Access-Control-Allow-Methods"] = '*'
             res.body = json.dumps({"status":  "ok"})              
             return res 
-
-
     
-
-
-
-
-
-
-#     ip = ["Connected to: ",wifiO.ssid]
-#     menuO.presets_state = True
-#     menuO.menu_state = False
-#     calibrationO.idle_state = False
-#     sLock.acquire()
-#     displayO.oled.fill(0)
-#     displayO.show_frame()
-#     displayO.text_frame("Connecting to "+ wifiO.ssid)
-#     displayO.show_header("WiFi")
-#     displayO.oled.show()
-#     sLock.release()
-#     if not wifiO.wlan.isconnected():
-#         sLock.acquire()    
-#         wifiO.connect()
-#         if not wifiO.wlan.isconnected():
-#             ip = ["Error: ","Try Again!"]
-#         displayO.oled.fill(0)
-#         displayO.show_frame()
-#         displayO.show_static_frame(ip,len(ip))
-#         displayO.show_header("WiFi")
-#         displayO.oled.show()
-#         toggle_server(loop,"start")
-#         sLock.release()
-#     else:
-#         sLock.acquire()
-#         displayO.oled.fill(0)
-#         displayO.show_frame()
-#         displayO.show_static_frame(ip,len(ip))
-#         displayO.show_header("WiFi")
-#         displayO.oled.show()
-#         sLock.release()     
        
         
 if wifiO.wlan.isconnected():

@@ -53,7 +53,7 @@ class Wifi:
         self.nearby = ["Go back"]
         for ssid, bssid, channel, rssi, authmode, hidden in sorted(networks, key=lambda x: x[3], reverse=True):
             ssid = ssid.decode('utf-8')
-            print(ssid)
+#             print(ssid)
             encrypted = authmode > 0
             if encrypted:
                 if self.saved_json:
@@ -64,6 +64,7 @@ class Wifi:
                     self.nearby.append(ssid)
         self.nearby.append("Scan again")
         if self.wlan.isconnected():
+            self.nearby.remove(self.wlan.config("ssid"))
             self.nearby.insert(len(self.nearby)-1,"Show IP")
             self.nearby.insert(len(self.nearby)-1,"Disconnect")
         
@@ -192,7 +193,7 @@ class Wifi:
         self.ssid = ""
         self.connected = False
         
-    def connect(self, ssid, password, retries=100, verbose = True):
+    def connect(self, ssid, password, retries=100, verbose = False):
         self.sLock.acquire()
         if self.wlan.isconnected():
             self.wifi = y_ico
