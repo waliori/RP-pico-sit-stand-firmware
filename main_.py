@@ -2,9 +2,8 @@ from setup import *
 import _thread
 from abutton import Pushbutton
 import uasyncio
-calibrationO = calibration.Calibration(displayO,motorO,sLock,wifiO.wifi            )
-menuO = menu.Menu(displayO,calibrationO,motorO)
-presetsO = presets.Presets(motorO,calibrationO,sLock)
+from time import time
+
 
 #NOTE no api params control implemented
 #TODO http add response status codes
@@ -34,7 +33,7 @@ def move_motor(button,calibration=False):
 
 def show_menu(menu):
     sLock.acquire()      
-    menuO.menu_state = True  
+    menuO.menu_state = True
     menuO.reset_state = False
     menuO.presets_state = False
     calibrationO.idle_state = False
@@ -346,9 +345,27 @@ pb_one = Pushbutton(one_button, suppress=True)
 pb_two = Pushbutton(two_button, suppress=True)
 pb_three = Pushbutton(three_button, suppress=True)
 
+timeo = 0
+
+def awake():
+    sLock.acquire()
+    global timeo
+    print(timeo)
+    displayO.wake()
+    timeo = 0
+    sLock.release()                                                                                                                                              
+    
+def handle_button(fc,args):
+    awake()
+    fc(*args)
+    print("here")
+    
+    
+    
+
 # @micropython.native
 def task_display_navigation():
-    global menu_list
+    global menu_list,timeo
     
     height_value = 0
     height_previousValue = 1
@@ -439,10 +456,10 @@ def task_display_navigation():
                     utime.sleep_ms(1)    
         if menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
             menuO.move_menu_encoder(step_pin,direction_pin,menu_list,"Main menu",wifiO.wifi)                                  
-            pb_up.press_func(menuO.move_menu_buttons, ("up",menu_list,"Main menu",wifiO.wifi,))
-            pb_down.press_func(menuO.move_menu_buttons, ("down",menu_list,"Main menu",wifiO.wifi,))
-            pb_switch.release_func(launch, (menu_list[(menuO.highlight-1) + menuO.shift],))
-            pb_switch.long_func(go_home, ())
+            pb_up.press_func(handle_button, (menuO.move_menu_buttons,("up",menu_list,"Main menu",wifiO.wifi,)))
+            pb_down.press_func(handle_button, (menuO.move_menu_buttons,("down",menu_list,"Main menu",wifiO.wifi,)))
+            pb_switch.release_func(handle_button, (launch, (menu_list[(menuO.highlight-1) + menuO.shift],)))
+            pb_switch.long_func(handle_button, (go_home, ()))
             pb_one.release_func(disable_button, ())
             pb_two.release_func(disable_button, ())
             pb_three.release_func(disable_button, ())
@@ -511,15 +528,6 @@ def task_display_navigation():
             pb_one.release_func(disable_button, ())
             pb_two.release_func(disable_button, ())
             pb_three.release_func(disable_button, ())
-        # subMenu
-#         elif menuO.sub_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
-#             pb_up.press_func(disable_button, ())
-#             pb_down.press_func(disable_button, ())
-#             pb_switch.release_func(show_menu, (menu_list,))
-#             pb_switch.long_func(go_home, ())
-#             pb_one.release_func(disable_button, ())
-#             pb_two.release_func(disable_button, ())
-#             pb_three.release_func(disable_button, ())
         elif motorO.api and not menuO.presets_state and not menuO.menu_state and not calibrationO.idle_state and calibrationO.speed_calibrated:
             pb_up.press_func(disable_button, ())
             pb_down.press_func(disable_button, ())
@@ -532,29 +540,30 @@ def task_display_navigation():
             #if idle show height and handle motor stoping if reach lowest or heighest point (calibration result)
             if calibrationO.idle_state:                                               
                 if motorO.counter <= calibrationO.min_encoder+10 and motorO.direction == -1:
-                    pb_up.press_func(move_motor, (up_button,))
+                    pb_up.press_func(handle_button, (move_motor,up_button,))
                     pb_down.press_func(disable_button, ())
                     motorO.stop_motor()
                 elif motorO.counter >= calibrationO.max_encoder-10 and motorO.direction == 1:
                     pb_up.press_func(disable_button, ())
-                    pb_down.press_func(move_motor, (down_button,))
+                    pb_down.press_func(handle_button, (move_motor,down_button,))
                     motorO.stop_motor()
                     
                 if motorO.direction == -1:
-                    pb_up.press_func(move_motor, (up_button,))
+                    pb_up.press_func(handle_button, (move_motor,up_button,))
                     pb_down.press_func(disable_button, ())
                 elif motorO.direction == 1:
                     pb_up.press_func(disable_button, ())
-                    pb_down.press_func(move_motor, (down_button,))
+                    pb_down.press_func(handle_button, (move_motor,down_button,))
                 elif motorO.direction == 0:
-                    pb_up.press_func(move_motor, (up_button,))
-                    pb_down.press_func(move_motor, (down_button,))
+                    pb_up.press_func(handle_button, (move_motor,up_button,))
+                    pb_down.press_func(handle_button, (move_motor,down_button,))
                     
                 #addig to that, we display current real height and handle buttons
-                if not menuO.menu_state and not displayO.lock_state and calibrationO.speed_calibrated:
-                    displayO.show_height_frame(str(calibrationO.real_height(motorO.counter)),motorO.rpm)
-                    pb_up.press_func(move_motor, (up_button,))
-                    pb_down.press_func(move_motor, (down_button,))
+                if not displayO.sleep_state and not menuO.menu_state and not displayO.lock_state and calibrationO.speed_calibrated:
+                    print(timeo)
+                    displayO.show_height_frame(str(calibrationO.real_height(motorO.counter)),motorO.rpm)                    
+                    pb_up.press_func(handle_button, (move_motor,up_button,))
+                    pb_down.press_func(handle_button, (move_motor,down_button,))
                     pb_switch.release_func(show_menu, (menu_list,))
                     pb_switch.long_func(show_menu, (menu_list,)) # maybe set presets                    
                     pb_one.release_func(go_to_preset, ('1',))
@@ -563,6 +572,22 @@ def task_display_navigation():
                     pb_one.long_func(set_preset, ('1',))
                     pb_two.long_func(set_preset, ('2',))
                     pb_three.long_func(set_preset, ('3',))
+                    timeo += 1
+                    if timeo >= 100:
+                        displayO.dim()
+                
+                elif displayO.sleep_state and not menuO.menu_state and not displayO.lock_state and calibrationO.speed_calibrated:
+                    pb_up.press_func(awake, ())
+                    pb_down.press_func(awake, ())
+                    pb_switch.release_func(awake, ())
+                    pb_switch.long_func(awake, ())                   
+                    pb_one.release_func(awake, ())
+                    pb_two.release_func(awake, ())
+                    pb_three.release_func(awake, ())
+                    pb_one.long_func(awake, ())
+                    pb_two.long_func(awake, ())
+                    pb_three.long_func(awake, ())
+                        
                 
                 else:
                     pb_up.press_func(disable_button, ())
@@ -801,6 +826,7 @@ else:
     wifiO.wifi = bytearray(b'\xff\xff\x98\x1f\xc1\x87\xf7\xf1\xbb\xfd\xfc\x1f\xf6\x0f\xe7\x27\xff\xdf\xfe\x67\xfe\x73\xfe\x79\xff\xff\x00\x00\x00\x00\x00\x00')
 
 _thread.start_new_thread(task_display_navigation, ())
+
 
 try: 
     loop.run_forever()

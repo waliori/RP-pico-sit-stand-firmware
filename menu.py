@@ -48,7 +48,7 @@ class Menu:
                 self.displayO.show_menu(menu_list,self.line, self.highlight, self.shift,tot,header,wifi)
             self.previous_value = step_pin.value()
             
-    def move_menu_buttons(self, direction, menu_list,header):
+    def move_menu_buttons(self, direction, menu_list,header,wifi):
         list_length = len(menu_list)
         tot = min(list_length,self.total_lines)
         if direction == "up":

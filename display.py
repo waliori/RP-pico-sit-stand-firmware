@@ -64,6 +64,7 @@ class Display:
         self.menu_list_length = 0
         self.menu_total_lines = 5
         self.lock_state = False
+        self.sleep_state = False
 
 
         
@@ -128,7 +129,7 @@ class Display:
         short_list = presets[shift:shift+total_lines]
         for item in short_list:
             self.oled.text(item, 2, (line*line_height)+10,1)
-            print(item)
+#             print(item)
             line += 1        
         self.show_frame()
         
@@ -217,6 +218,11 @@ class Display:
             self.oled.text(part,2, self.title_height+c )
             c = c + 10
         self.oled.show()
-
+    
+    def dim(self):
+        self.sleep_state = True
+        self.oled.init_display()
+    def wake(self):
+        self.sleep_state = False
         
     

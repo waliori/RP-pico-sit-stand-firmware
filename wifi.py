@@ -73,7 +73,7 @@ class Wifi:
             self.connected = True
             self.wifi = y_ico
             print("already connected to ", self.wlan.ifconfig())
-            machine.soft_reset()
+#             machine.soft_reset()
         try:
             networks = self.wlan.scan()
             for ssid, bssid, channel, rssi, authmode, hidden in sorted(networks, key=lambda x: x[3], reverse=True):
@@ -92,13 +92,21 @@ class Wifi:
                         self.connected = self.connect(ssid, None)
                 if self.connected:
                     print("connected to ", self.wlan.ifconfig())
-                    machine.soft_reset()                    
+                    self.wifi = y_ico
+#                     machine.soft_reset()                    
         except Exception as e:
             print(str(e))
         if not self.connected:
+            self.sLock.acquire()
+            self.displayO.show_header("Home",self.wifi)
+            self.sLock.release()
             self.connected = await self.apserver()
             if self.connected:                
                 machine.soft_reset()
+#             else:
+#                 return False
+#         else:
+#             return True
 #         if self.connected:                
 #             machine.soft_reset()
     
@@ -193,7 +201,7 @@ class Wifi:
         self.ssid = ""
         self.connected = False
         
-    def connect(self, ssid, password, retries=100, verbose = False):
+    def connect(self, ssid, password, retries=100, verbose = True):
         self.sLock.acquire()
         if self.wlan.isconnected():
             self.wifi = y_ico
