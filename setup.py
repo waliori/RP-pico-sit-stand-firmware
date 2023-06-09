@@ -57,13 +57,18 @@ outB = Pin(27, mode=Pin.IN) # Pin DT of encoder 2
 
 
 # oled display init
-displayO = display.Display(128,64,1,7,6)
-wifiO = wifi.Wifi(app,sLock,displayO)
-asyncio.sleep(2)
 
+displayO = display.Display(128,64,1,7,6)
+print("initi displayO")
+menuO = menu.Menu(displayO)
+print("initi menuO")
+wifiO = wifi.Wifi(app,sLock,displayO,menuO)
+print("initi wifiO")
 calibrationO = calibration.Calibration(displayO,motorO,sLock,wifiO.wifi)
-menuO = menu.Menu(displayO,calibrationO,motorO)
+print("initi calibrationO")
 presetsO = presets.Presets(motorO,calibrationO,sLock)
+print("initi presetsO")
+asyncio.sleep(2)
 # oled = displayO.init()
 # font_writer = writer.Writer(oled, freesans20)
 

@@ -24,7 +24,7 @@ class Calibration:
 #         self.height_value = 0
 #         self.height_previousValue = 1
 #         self.min_height = 0
-        print(self.wifi)
+#         print(self.wifi)
         try:    
             settings = open("settings.json","r")
             settings_json = json.loads(settings.read())

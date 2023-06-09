@@ -1,9 +1,7 @@
 class Menu:
-    def __init__(self,displayO,calibrationO,motorO):
+    def __init__(self,displayO):
         self.menu_state = False
         self.displayO = displayO
-        self.calibrationO = calibrationO
-        self.motorO = motorO
         self.line = 1 
         self.highlight = 1
         self.shift = 0
@@ -19,11 +17,14 @@ class Menu:
 #     def show_menu(self,menu):
 #         self.displayO.show_menu(menu)
         
-    def go_home(self,wifi):        
+    def go_home(self,wifi,real_height,counter):
+        self.menu_state = False
+        self.reset_state = False
+        self.presets_state = False
         self.displayO.oled.fill(0)
         self.displayO.show_header("Home",wifi)
         self.displayO.show_frame()
-        self.displayO.show_height_frame(str(self.calibrationO.real_height(self.motorO.counter)))
+        self.displayO.show_height_frame(str(real_height(counter)))
         
     def move_menu_encoder(self,step_pin,direction_pin,menu_list,header,wifi):
         list_length = len(menu_list)

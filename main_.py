@@ -110,11 +110,8 @@ menu_list = ["..", "WiFi", "Lock Unlock", "Show Presets", "Show min/max", "Colli
 
 def go_home():
     sLock.acquire()
-    menuO.menu_state = False
-    menuO.reset_state = False
-    menuO.presets_state = False
     calibrationO.idle_state = True
-    menuO.go_home(wifiO.wifi)
+    menuO.go_home(wifiO.wifi,calibrationO.real_height,motorO.counter)
     sLock.release()
     
 def go_back():
@@ -353,13 +350,16 @@ def awake():
     print(timeo)
     displayO.wake()
     timeo = 0
+    menuO.go_home(wifiO.wifi,calibrationO.real_height,motorO.counter)
     sLock.release()                                                                                                                                              
     
 def handle_button(fc,args):
     awake()
     fc(*args)
     print("here")
-    
+    global timeo
+    print(timeo)
+    timeo = 0
     
     
 
@@ -822,7 +822,7 @@ if wifiO.wlan.isconnected():
     wifiO.wifi = bytearray(b'\xff\xff\xff\xff\xf8\x1f\xe3\xc7\xcf\xf3\xfe\x7f\xf8\x1f\xf7\xef\xff\xff\xfe\x7f\xfe\x7f\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00')
     toggle_server(loop,'start')
 else:
-    loop.create_task(wifiO.start_connection())
+    loop.create_task(wifiO.start_connection(calibrationO.real_height,motorO.counter))
     wifiO.wifi = bytearray(b'\xff\xff\x98\x1f\xc1\x87\xf7\xf1\xbb\xfd\xfc\x1f\xf6\x0f\xe7\x27\xff\xdf\xfe\x67\xfe\x73\xfe\x79\xff\xff\x00\x00\x00\x00\x00\x00')
 
 _thread.start_new_thread(task_display_navigation, ())

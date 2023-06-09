@@ -9,9 +9,10 @@ import machine
 y_ico = bytearray(b'\xff\xff\xff\xff\xf8\x1f\xe3\xc7\xcf\xf3\xfe\x7f\xf8\x1f\xf7\xef\xff\xff\xfe\x7f\xfe\x7f\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00')
 n_ico = bytearray(b'\xff\xff\x98\x1f\xc1\x87\xf7\xf1\xbb\xfd\xfc\x1f\xf6\x0f\xe7\x27\xff\xdf\xfe\x67\xfe\x73\xfe\x79\xff\xff\x00\x00\x00\x00\x00\x00')
 class Wifi:    
-    def __init__(self,app,sLock,displayO):
+    def __init__(self,app,sLock,displayO,menuO):
         self.sLock = sLock
         self.displayO = displayO
+        self.menuO = menuO
         self.wlan = network.WLAN(network.STA_IF)
         self.wlan.active(True)
         self.wlan.config(pm = 0xa11140)
@@ -47,7 +48,11 @@ class Wifi:
             self.saved_json = {}
             self.sLock.release()
         
-    
+    def go_home(self,real_height,counter):
+        self.sLock.acquire()
+        self.menuO.go_home(self.wifi,real_height,counter)
+        self.sLock.release()
+        
     def nearby_wifis(self):
         networks = self.wlan.scan()
         self.nearby = ["Go back"]
@@ -64,16 +69,17 @@ class Wifi:
                     self.nearby.append(ssid)
         self.nearby.append("Scan again")
         if self.wlan.isconnected():
+#             print(self.wlan.ifconfig("ssid"))
             self.nearby.remove(self.wlan.config("ssid"))
             self.nearby.insert(len(self.nearby)-1,"Show IP")
             self.nearby.insert(len(self.nearby)-1,"Disconnect")
         
-    async def start_connection(self):
+    async def start_connection(self,real_height,counter):
         if self.wlan.isconnected():
             self.connected = True
             self.wifi = y_ico
             print("already connected to ", self.wlan.ifconfig())
-#             machine.soft_reset()
+            self.go_home(real_height,counter)
         try:
             networks = self.wlan.scan()
             for ssid, bssid, channel, rssi, authmode, hidden in sorted(networks, key=lambda x: x[3], reverse=True):
@@ -93,6 +99,7 @@ class Wifi:
                 if self.connected:
                     print("connected to ", self.wlan.ifconfig())
                     self.wifi = y_ico
+                    self.go_home(real_height,counter)
 #                     machine.soft_reset()                    
         except Exception as e:
             print(str(e))
@@ -100,9 +107,11 @@ class Wifi:
             self.sLock.acquire()
             self.displayO.show_header("Home",self.wifi)
             self.sLock.release()
-            self.connected = await self.apserver()
-            if self.connected:                
-                machine.soft_reset()
+            self.connected = await self.apserver(real_height,counter)
+            if self.connected:
+                self.stop()
+                self.go_home(real_height,counter)
+#                 machine.soft_reset()
 #             else:
 #                 return False
 #         else:
@@ -143,9 +152,10 @@ class Wifi:
         else:
             return False
         
-    async def apserver(self):
+    async def apserver(self,real_height,counter):
         if self.wlan.isconnected():
-            machine.soft_reset()
+            self.stop()
+            self.go_home(real_height,counter)
         self.apmode = True
         self.ap.active(True)
         app = self.app
@@ -164,7 +174,8 @@ class Wifi:
             print(correct)
             if correct:
                 success = """ <html><center><br><br><h1><span>successfully connected to WiFi network {0}.</span></h1><br><br></center></html> """.format(request.form.get("ssid"))
-                machine.soft_reset()
+                self.stop()
+                self.go_home(real_height,counter)
                 return success, 200, {'Content-Type': 'text/html'}
             else:
                 print("here")
@@ -179,7 +190,8 @@ class Wifi:
 #                     return "Success, restarting...", 200
 #                 finally:
 #                     print("restarting")
-                machine.soft_reset()
+                self.stop()
+                self.go_home(real_height,counter)
             else:
                 return redirect('/?error=true')
             
