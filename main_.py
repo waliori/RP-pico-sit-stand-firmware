@@ -540,35 +540,35 @@ def task_display_navigation():
             #if idle show height and handle motor stoping if reach lowest or heighest point (calibration result)
             if calibrationO.idle_state:                                               
                 if motorO.counter <= calibrationO.min_encoder+10 and motorO.direction == -1:
-                    pb_up.press_func(handle_button, (move_motor,up_button,))
+                    pb_up.press_func(handle_button, (move_motor, (up_button,)))
                     pb_down.press_func(disable_button, ())
                     motorO.stop_motor()
                 elif motorO.counter >= calibrationO.max_encoder-10 and motorO.direction == 1:
                     pb_up.press_func(disable_button, ())
-                    pb_down.press_func(handle_button, (move_motor,down_button,))
+                    pb_down.press_func(handle_button, (move_motor, (down_button,)))
                     motorO.stop_motor()
                     
                 if motorO.direction == -1:
-                    pb_up.press_func(handle_button, (move_motor,up_button,))
+                    pb_up.press_func(handle_button, (move_motor, (up_button,)))
                     pb_down.press_func(disable_button, ())
                 elif motorO.direction == 1:
                     pb_up.press_func(disable_button, ())
-                    pb_down.press_func(handle_button, (move_motor,down_button,))
+                    pb_down.press_func(handle_button, (move_motor, (down_button,)))
                 elif motorO.direction == 0:
-                    pb_up.press_func(handle_button, (move_motor,up_button,))
-                    pb_down.press_func(handle_button, (move_motor,down_button,))
+                    pb_up.press_func(handle_button, (move_motor, (up_button,)))
+                    pb_down.press_func(handle_button, (move_motor, (down_button,)))
                     
                 #addig to that, we display current real height and handle buttons
                 if not displayO.sleep_state and not menuO.menu_state and not displayO.lock_state and calibrationO.speed_calibrated:
                     print(timeo)
                     displayO.show_height_frame(str(calibrationO.real_height(motorO.counter)),motorO.rpm)                    
-                    pb_up.press_func(handle_button, (move_motor,up_button,))
-                    pb_down.press_func(handle_button, (move_motor,down_button,))
+                    pb_up.press_func(handle_button, (move_motor, (up_button,)))
+                    pb_down.press_func(handle_button, (move_motor,(down_button,)))
                     pb_switch.release_func(show_menu, (menu_list,))
                     pb_switch.long_func(show_menu, (menu_list,)) # maybe set presets                    
-                    pb_one.release_func(go_to_preset, ('1',))
-                    pb_two.release_func(go_to_preset, ('2',))
-                    pb_three.release_func(go_to_preset, ('3',))
+                    pb_one.release_func(handle_button,(go_to_preset, ('1',)))
+                    pb_two.release_func(handle_button,(go_to_preset, ('2',)))
+                    pb_three.release_func(handle_button,(go_to_preset, ('3',)))
                     pb_one.long_func(set_preset, ('1',))
                     pb_two.long_func(set_preset, ('2',))
                     pb_three.long_func(set_preset, ('3',))
