@@ -44,6 +44,8 @@ def divide_phrase(phrase, max_width, avg_char_width):
     parts.append(part)
     return parts
 
+
+
 class Display:
     def __init__(self,width,height,i2c_id,scl,sda,freq=400000):
         self.width = width
@@ -66,11 +68,26 @@ class Display:
         self.lock_state = False
         self.sleep_state = False
 
-
+    
         
     def init(self):        
         return self.oled
-
+    
+    def seconds_to_timestamp(self,seconds):
+        if seconds == 0:
+            return "Never"
+        days = seconds // 86400
+        seconds %= 86400
+        hour = seconds // 3600
+        seconds %= 3600
+        minutes = seconds // 60
+        seconds %= 60    
+        if days > 0:
+            return "Never"
+        elif hour > 0:
+            return "{}h {}m".format(hour, minutes)
+        else:
+            return "{}m {}s".format(minutes, seconds)
         
     def show_boot(self):
         def custom_to_buff(data):
@@ -174,8 +191,19 @@ class Display:
         self.font_writer_30.printstring(text)
         if rpm != 0:
             self.oled.text('RPM: '+str(int(rpm)),60,55)
-#             self.font_writer_20.set_textpos(2, 40)
-#             self.font_writer_20.printstring(str(rpm))
+        self.oled.show()
+
+    def show_sleep_frame(self,time):
+        if time > 86400:
+            text = "Never"
+        else:
+            text= self.seconds_to_timestamp(time)
+        self.clear_frame()
+        h,w = get_avg_char_width_height(text,firacodeBold30)
+        x=get_center_x(text,128,w)
+        y=get_center_y(self.height-1+ self.title_height+3,h)
+        self.font_writer_30.set_textpos(x, y)
+        self.font_writer_30.printstring(text)
         self.oled.show()
         
     def draw_frame(self, x,y, width, height):

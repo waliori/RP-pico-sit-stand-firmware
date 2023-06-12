@@ -1,3 +1,4 @@
+#TODO add file.close()
 import json
 import utime
 import math
@@ -34,6 +35,7 @@ class Calibration:
             self.min_real = settings_json["min_real"]
             self.motorO.max_speed = settings_json["max_speed"]
             self.motorO.min_speed = settings_json["min_speed"]
+            self.sleep_time = settings_json["sleep_time"]
             self.idle_state = True
             self.semi_calibrated = True
             self.real_semi_calibrated = True        
@@ -47,7 +49,8 @@ class Calibration:
             self.idle_state = False
             self.sLock.acquire()
             file=open("settings.json","w")
-            file.write(json.dumps({}))
+            self.sleep_time = 30
+            file.write(json.dumps({"sleep_time":30}))
             self.sLock.release()
             self.displayO.oled.fill(0)
             self.displayO.show_header("Calibration",self.wifi)
@@ -116,7 +119,7 @@ class Calibration:
         utime.sleep(1)
         self.displayO.oled.fill(0)
         self.displayO.show_header("Home",self.wifi)
-        self.displayO.show_frame()
+        self.displayO.show_height_frame(str(self.real_height(self.motorO.counter)),0)
         self.sLock.release()
     
     def collision_semi_calibrate(self):
@@ -126,16 +129,18 @@ class Calibration:
         settings_json = json.loads(settings.read())
         settings_json["min_speed"] = self.motorO.min_speed
         settings_json["max_speed"] = self.motorO.max_speed
+        settings.close()
         print(self.motorO.min_speed,self.motorO.max_speed)
         file=open("settings.json","w")
         file.write(json.dumps(settings_json))
+        file.close()
         self.displayO.clear_frame()
         self.displayO.oled.show()
         self.displayO.text_frame("Done! Exiting to Main Screen...")        
         utime.sleep(1)
         self.displayO.oled.fill(0)
         self.displayO.show_header("Home",self.wifi)
-        self.displayO.show_frame()
+        self.displayO.show_height_frame(str(self.real_height(self.motorO.counter),0))
         self.sLock.release()
         self.idle_state = True
         

@@ -100,17 +100,21 @@ class Wifi:
                     print("connected to ", self.wlan.ifconfig())
                     self.wifi = y_ico
                     self.go_home(real_height,counter)
+                    break 
 #                     machine.soft_reset()                    
         except Exception as e:
             print(str(e))
         if not self.connected:
             self.sLock.acquire()
             self.displayO.show_header("Home",self.wifi)
+            self.go_home(real_height,counter)
             self.sLock.release()
             self.connected = await self.apserver(real_height,counter)
             if self.connected:
                 self.stop()
+                self.displayO.show_header("Home",self.wifi)
                 self.go_home(real_height,counter)
+            
 #                 machine.soft_reset()
 #             else:
 #                 return False
