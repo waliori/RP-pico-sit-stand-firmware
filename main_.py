@@ -55,9 +55,7 @@ def set_sleep():
     preset_list = ["Turn KNOB to", "set time sleep"]
     displayO.show_static_frame(preset_list,len(preset_list))
     displayO.show_header("Sleep",wifiO.wifi)
-    
     displayO.oled.show()
-    print("set_sleep")
 
 def config_menu():
     global conf_menu
@@ -132,7 +130,6 @@ def go_home():
     
 def go_back():
     global current_m, menu_list
-    print(f"current menu {current_m}")
     if current_m in ["Show IP"]:
         current_m = "WiFi"
         wifi_menu()
@@ -148,6 +145,9 @@ def back_m():
     global menu_list
     show_menu(menu_list)
 
+def start_ap():
+    print("start AP")
+    
 def launch(item):
   global current_m
   current_m = item
@@ -165,7 +165,8 @@ def launch(item):
     "Scan again": wifi_menu,
     "Go back": back_m,
     "Configuration": config_menu,
-    "Sleep after": set_sleep
+    "Sleep after": set_sleep,
+    "Start AP": start_ap
   }
   if wifiO.saved_json:
       for wf in wifiO.saved_json.keys():
@@ -387,6 +388,8 @@ def handle_button(fc,args):
 
 def set_sleep_value(sleep_value):
     menuO.slp_state=False
+    if sleep_value == 0 or sleep_value == 86400:
+        sleep_value = sys.maxsize
     calibrationO.sleep_time = sleep_value
     sLock.acquire()
     file=open("settings.json","r")
