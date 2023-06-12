@@ -36,6 +36,7 @@ class Calibration:
             self.min_real = settings_json["min_real"]
             self.motorO.max_speed = settings_json["max_speed"]
             self.motorO.min_speed = settings_json["min_speed"]
+            self.sleep_time = settings_json["sleep_time"]
             if settings_json["sleep_time"] > 86400:
                 self.sleep_time = 86400
             self.idle_state = True
