@@ -2,6 +2,7 @@
 import json
 import utime
 import math
+import sys
 class Calibration:
     def __init__(self,displayO,motorO,sLock,wifi):
         self.idle_state = False
@@ -35,7 +36,8 @@ class Calibration:
             self.min_real = settings_json["min_real"]
             self.motorO.max_speed = settings_json["max_speed"]
             self.motorO.min_speed = settings_json["min_speed"]
-            self.sleep_time = settings_json["sleep_time"]
+            if settings_json["sleep_time"] > 86400:
+                self.sleep_time = 86400
             self.idle_state = True
             self.semi_calibrated = True
             self.real_semi_calibrated = True        
