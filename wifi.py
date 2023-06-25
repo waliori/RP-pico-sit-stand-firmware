@@ -266,6 +266,7 @@ class Wifi:
         self.sLock.acquire()
         if self.wlan.isconnected():
             self.wifi = y_ico
+            self.stop()
             return True        
         self.string = ""
         self.wlan.connect(ssid, password)
@@ -292,7 +293,8 @@ class Wifi:
         if self.wlan.status() == network.STAT_GOT_IP:
             self.ip = self.wlan.ifconfig()[0]
             self.ssid = ssid
-            self.wifi = y_ico            
+            self.wifi = y_ico
+            self.stop()
         self.sLock.release()
         return self.wlan.isconnected()
     

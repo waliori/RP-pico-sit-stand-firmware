@@ -342,7 +342,7 @@ def show_ip():
     displayO.oled.fill(0)
     displayO.show_frame()
     displayO.show_static_frame(ip,len(ip))
-    displayO.show_header("IP Address",wifiO.wifi,wifiO.aps)
+    displayO.show_header("IP",wifiO.wifi,wifiO.aps)
     displayO.oled.show()
 #     sLock.release()
     
