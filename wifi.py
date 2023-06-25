@@ -25,6 +25,7 @@ class Wifi:
         self.appassword = "waliori123"
         self.ap = network.WLAN(network.AP_IF)
         self.ap.active(False)
+        self.aps = n_a_ico
         self.ap.config(essid=self.apssid, password=self.appassword)
         self.ip = ""
         self.ssid = ""
@@ -39,19 +40,20 @@ class Wifi:
             self.wifi = y_ico
         else:
             self.wifi = n_ico
-        if self.ap.active():
-            self.aps = y_a_ico
-        else:
-            self.aps = n_a_ico
+
+            
            
 #         self.saved                
         try:
+            print("try")
             self.sLock.acquire()
             saved = open("saved_wifi.json","r")
             self.saved_json = json.loads(saved.read())
             print(self.saved_json)
             self.sLock.release()
         except:
+            print("except")
+            self.sLock.release()
             self.sLock.acquire()
             file=open("saved_wifi.json","w")
             file.write(json.dumps({}))
@@ -120,11 +122,11 @@ class Wifi:
                     break 
 #                     machine.soft_reset()                    
         except Exception as e:
-            print(str(e))
+            print("Error here MF:", str(e))
         if not self.connected:
 #             self.sLock.acquire()
-            self.displayO.show_header("Home",self.wifi,self.aps)
-            self.go_home(real_height,counter)
+#             self.displayO.show_header("Home",self.wifi,self.aps)
+#             self.go_home(real_height,counter)
 #             self.sLock.release()
             self.connected = await self.apserver(real_height,counter)
             if self.connected:
@@ -133,8 +135,8 @@ class Wifi:
                 self.go_home(real_height,counter)
             
 #                 machine.soft_reset()
-#             else:
-#                 return False
+            else:
+                return False
 #         else:
 #             return True
 #         if self.connected:                
