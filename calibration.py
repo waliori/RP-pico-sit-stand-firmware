@@ -4,7 +4,7 @@ import utime
 import math
 import sys
 class Calibration:
-    def __init__(self,displayO,motorO,sLock,wifi):
+    def __init__(self,displayO,motorO,sLock,wifi,aps):
         self.idle_state = False
         self.calibrated = False
         self.real_calibrated = False
@@ -14,6 +14,7 @@ class Calibration:
         self.displayO = displayO
         self.motorO = motorO
         self.wifi = wifi
+        self.aps = aps
         self.max_encoder = 0
         self.min_encoder = 0
         self.max_real = 0
@@ -46,7 +47,7 @@ class Calibration:
             self.real_calibrated = True
             self.speed_calibrated = True
             self.displayO.oled.fill(0)
-            self.displayO.show_header("Home",self.wifi)
+            self.displayO.show_header("Home",self.wifi,self.aps)
             self.displayO.show_frame()
         except:
             self.idle_state = False
@@ -56,7 +57,7 @@ class Calibration:
             file.write(json.dumps({"sleep_time":30}))
             self.sLock.release()
             self.displayO.oled.fill(0)
-            self.displayO.show_header("Calibration",self.wifi)
+            self.displayO.show_header("Calibration",self.wifi,self.aps)
             self.displayO.show_frame()
             self.displayO.text_frame("Go to HIGHEST position (UP), to confirm long clik (KNOB)")
             
@@ -121,7 +122,7 @@ class Calibration:
         self.displayO.text_frame("Done! Exiting to Main Screen...")        
         utime.sleep(1)
         self.displayO.oled.fill(0)
-        self.displayO.show_header("Home",self.wifi)
+        self.displayO.show_header("Home",self.wifi,self.aps)
         self.displayO.show_height_frame(str(self.real_height(self.motorO.counter)),0)
         self.sLock.release()
     
@@ -142,7 +143,7 @@ class Calibration:
         self.displayO.text_frame("Done! Exiting to Main Screen...")        
         utime.sleep(1)
         self.displayO.oled.fill(0)
-        self.displayO.show_header("Home",self.wifi)
+        self.displayO.show_header("Home",self.wifi,self.aps)
         self.displayO.show_height_frame(str(self.real_height(self.motorO.counter),0))
         self.sLock.release()
         self.idle_state = True

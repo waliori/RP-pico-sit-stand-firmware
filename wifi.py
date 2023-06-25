@@ -6,8 +6,13 @@ from microdot_asyncio import redirect
 import machine
 # import socket
 
+#wifi logo
 y_ico = bytearray(b'\xff\xff\xff\xff\xf8\x1f\xe3\xc7\xcf\xf3\xfe\x7f\xf8\x1f\xf7\xef\xff\xff\xfe\x7f\xfe\x7f\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00')
 n_ico = bytearray(b'\xff\xff\x98\x1f\xc1\x87\xf7\xf1\xbb\xfd\xfc\x1f\xf6\x0f\xe7\x27\xff\xdf\xfe\x67\xfe\x73\xfe\x79\xff\xff\x00\x00\x00\x00\x00\x00')
+
+#ap logo
+y_a_ico = bytearray(b'\xff\xff\xff\xff\xff\xff\xff\xff\xcf\xf3\xdf\xfb\xd3\xcb\x96\x69\x96\x69\xd3\xcb\xdf\xfb\xcf\xf3\xff\xff\xff\xff\xff\xff\xff\xff')
+n_a_ico = bytearray(b'\xff\xff\xff\xff\xdf\xff\xef\xff\xe7\xe7\xe3\xf7\xc9\x93\xd8\xdb\xdb\x5b\xc9\xb3\xef\xd7\xe7\xef\xff\xf7\xff\xfb\xff\xff\xff\xff')
 class Wifi:    
     def __init__(self,app,sLock,displayO,menuO):
         self.sLock = sLock
@@ -19,6 +24,7 @@ class Wifi:
         self.apssid = "PicoW"
         self.appassword = "waliori123"
         self.ap = network.WLAN(network.AP_IF)
+        self.ap.active(False)
         self.ap.config(essid=self.apssid, password=self.appassword)
         self.ip = ""
         self.ssid = ""
@@ -33,6 +39,10 @@ class Wifi:
             self.wifi = y_ico
         else:
             self.wifi = n_ico
+        if self.ap.active():
+            self.aps = y_a_ico
+        else:
+            self.aps = n_a_ico
            
 #         self.saved                
         try:
@@ -50,7 +60,7 @@ class Wifi:
         
     def go_home(self,real_height,counter):
         self.sLock.acquire()
-        self.menuO.go_home(self.wifi,real_height,counter)
+        self.menuO.go_home(self.wifi,self.aps,real_height,counter)
         self.sLock.release()
         
     def nearby_wifis(self):
@@ -72,12 +82,18 @@ class Wifi:
             self.nearby.insert(len(self.nearby)-1,"Show IP")
             self.nearby.insert(len(self.nearby)-1,"Disconnect")
         else:
-            self.nearby.insert(len(self.nearby)-1,"Start AP")
+            print("AP state")
+            print(self.ap.active())
+            if self.ap.active():
+                self.nearby.insert(len(self.nearby)-1,"Stop AP")
+            else:
+                self.nearby.insert(len(self.nearby)-1,"Start AP")
         
     async def start_connection(self,real_height,counter):
         if self.wlan.isconnected():
             self.connected = True
             self.wifi = y_ico
+            self.aps = n_a_ico
             print("already connected to ", self.wlan.ifconfig())
             self.go_home(real_height,counter)
         try:
@@ -99,20 +115,21 @@ class Wifi:
                 if self.connected:
                     print("connected to ", self.wlan.ifconfig())
                     self.wifi = y_ico
+                    self.aps = n_a_ico
                     self.go_home(real_height,counter)
                     break 
 #                     machine.soft_reset()                    
         except Exception as e:
             print(str(e))
         if not self.connected:
-            self.sLock.acquire()
-            self.displayO.show_header("Home",self.wifi)
+#             self.sLock.acquire()
+            self.displayO.show_header("Home",self.wifi,self.aps)
             self.go_home(real_height,counter)
-            self.sLock.release()
+#             self.sLock.release()
             self.connected = await self.apserver(real_height,counter)
             if self.connected:
                 self.stop()
-                self.displayO.show_header("Home",self.wifi)
+                self.displayO.show_header("Home",self.wifi,self.aps)
                 self.go_home(real_height,counter)
             
 #                 machine.soft_reset()
@@ -156,12 +173,36 @@ class Wifi:
         else:
             return False
         
+            
+            
+        @app.route('/connect',methods=['POST'])
+        def connect(request):
+            connected = self.connect(request.form.get("ssid2"), request.form.get("password2"))
+            if connected:
+                self.stop()
+                self.go_home(real_height,counter)
+                try:
+                    return "Success, restarting...", 200
+                finally:
+                    print("restarting")
+            else:
+                return redirect('/?error=true')
+            
+        
+        app.run(port=80,debug=True)
+        self.app = app
+        
+        
     async def apserver(self,real_height,counter):
         if self.wlan.isconnected():
             self.stop()
             self.go_home(real_height,counter)
         self.apmode = True
         self.ap.active(True)
+        self.aps = y_a_ico
+        if self.server:
+            self.app.shutdown()
+            self.server = False
         app = self.app
         print('Connect to WiFi ssid ' + self.apssid + ', password: ' + self.appassword)
         print('and access 192.168.4.1 with a web browser')
@@ -169,6 +210,7 @@ class Wifi:
         html = self.htmlssid
         @app.route('/')
         async def hello(request):
+            print("here")
             return html(), 200, {'Content-Type': 'text/html'}
 
 
@@ -208,6 +250,7 @@ class Wifi:
     def stop(self):
         self.ap.active(False)
         self.apmode = False
+        self.aps = n_a_ico
                 
         
     def disconnect(self):
@@ -230,7 +273,7 @@ class Wifi:
         
         self.displayO.oled.fill(0)
         self.displayO.show_frame()
-        self.displayO.show_header("Wifi",self.wifi)
+        self.displayO.show_header("Wifi",self.wifi,self.aps)
         dots=""            
         while retries > 0 and self.wlan.status() != network.STAT_GOT_IP:
             retries -= 1

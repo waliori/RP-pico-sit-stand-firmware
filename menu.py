@@ -19,17 +19,17 @@ class Menu:
 #     def show_menu(self,menu):
 #         self.displayO.show_menu(menu)
         
-    def go_home(self,wifi,real_height,counter):
+    def go_home(self,wifi,ap,real_height,counter):
         self.menu_state = False
         self.reset_state = False
         self.presets_state = False
         self.displayO.oled.fill(0)
         print("here")
-        self.displayO.show_header("Home",wifi)
+        self.displayO.show_header("Home",wifi,ap)
         self.displayO.show_frame()
         self.displayO.show_height_frame(str(real_height(counter)))
         
-    def move_menu_encoder(self,step_pin,direction_pin,menu_list,header,wifi):
+    def move_menu_encoder(self,step_pin,direction_pin,menu_list,header,wifi,ap):
         list_length = len(menu_list)
         tot = min(list_length,self.total_lines)
         if self.previous_value != step_pin.value():
@@ -49,10 +49,10 @@ class Menu:
                     else: 
                         if self.shift+tot < list_length:
                             self.shift += 1
-                self.displayO.show_menu(menu_list,self.line, self.highlight, self.shift,tot,header,wifi)
+                self.displayO.show_menu(menu_list,self.line, self.highlight, self.shift,tot,header,wifi,ap)
             self.previous_value = step_pin.value()
             
-    def move_menu_buttons(self, direction, menu_list,header,wifi):
+    def move_menu_buttons(self, direction, menu_list,header,wifi,ap):
         list_length = len(menu_list)
         tot = min(list_length,self.total_lines)
         if direction == "up":
@@ -67,7 +67,7 @@ class Menu:
             else: 
                 if self.shift+tot < list_length:
                     self.shift += 1
-        self.displayO.show_menu(menu_list,self.line, self.highlight, self.shift,tot,header,wifi)
+        self.displayO.show_menu(menu_list,self.line, self.highlight, self.shift,tot,header,wifi,ap)
     
 #     def move_menu_buttons(self,button,up_button,menu_list): 
 #         list_length = len(menu_list)

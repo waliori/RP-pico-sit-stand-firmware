@@ -108,7 +108,7 @@ class Display:
         self.font_writer_20.printstring("sit/stand desk")
         self.oled.show()
         
-    def show_menu(self,menu,line, highlight, shift,total_lines,header,wifi):
+    def show_menu(self,menu,line, highlight, shift,total_lines,header,wifi,ap):
         item = 1
         line = 1
         line_height = 10
@@ -129,7 +129,7 @@ class Display:
             else:
                 self.oled.text(item, 10, (line*line_height)+6,1)
             line += 1
-        self.show_header(header,wifi)
+        self.show_header(header,wifi,ap)
         self.show_frame()
         self.oled.show()
     
@@ -212,8 +212,9 @@ class Display:
         self.oled.hline(x, height, width, 1)
         self.oled.vline(width, y, height+1, 1)
 
-    def show_header(self,header,wifi):             
+    def show_header(self,header,wifi,ap):             
         fb = framebuf.FrameBuffer(wifi, 14, 14, framebuf.MONO_HLSB)
+        ap_fb = framebuf.FrameBuffer(ap, 16, 16, framebuf.MONO_HLSB)
         self.draw_frame(0,0,self.width-1,self.title_height+1)
         self.oled.fill_rect(0,0,self.width-1,self.title_height+1,1)
         if self.lock_state:
@@ -224,6 +225,7 @@ class Display:
         l_fb = framebuf.FrameBuffer(lock, 14, 14, framebuf.MONO_HLSB)
         self.oled.blit(l_fb, 112, 0)
         self.oled.blit(fb, 0, 1)
+        self.oled.blit(ap_fb, 15, 0)
         h,w = get_avg_char_width_height(header)
         x=get_center_x(header,self.width,w)
         y=get_center_y(self.title_height,h)
