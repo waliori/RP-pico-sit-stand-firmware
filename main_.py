@@ -340,9 +340,9 @@ def go_to_preset(preset):
         p = presetsO.get_preset(preset)
         if p >= calibrationO.min_encoder and p <= calibrationO.max_encoder:
             presetsO.go_preset(outA, outB, p)
-            return "Ok"
-        return "preset outside limits"
-    return "no preset"
+            return True
+        return False
+    return False
 
 def set_preset(preset):
     presetsO.set_preset(preset)
@@ -959,7 +959,7 @@ def toggle_server(loop,operation):
         current_task = None
         # ######### controllers
         async def a_go_to_preset(preset):
-            go_to_preset(preset)
+            return go_to_preset(preset)
 
         async def a_get_height():
             return str(calibrationO.real_height(motorO.counter))
@@ -974,7 +974,7 @@ def toggle_server(loop,operation):
                 preset_list = []
             else:
                 preset_list = ["{}: {}".format(k, calibrationO.real_height(v)) for k, v in presets.items()]
-            return json.dumps(d)            
+            return json.dumps(preset_list)            
 
         async def a_forward():
             motorO.api = True
@@ -1029,7 +1029,10 @@ def toggle_server(loop,operation):
             res.status_code = 200
             res.headers["Access-Control-Allow-Origin"] = '*'
             res.headers["Access-Control-Allow-Methods"] = '*'
-            res.body = json.dumps({"status": "ok"})              
+            if current_task:
+                res.body = json.dumps({"status": "ok"})
+            else:
+                res.body = json.dumps({"status": "nok"})
             return res
 
         @wifiO.app.route('/get_height',methods=['GET', 'OPTIONS'])
