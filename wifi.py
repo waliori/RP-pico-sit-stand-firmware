@@ -125,28 +125,18 @@ class Wifi:
                     self.wifi = y_ico
                     self.aps = n_a_ico
                     self.go_home(real_height,counter)
-                    break 
-#                     machine.soft_reset()                    
+                    break                   
         except Exception as e:
             print("Error here MF:", str(e))
         if not self.connected:
-#             self.sLock.acquire()
-#             self.displayO.show_header("Home",self.wifi,self.aps)
-#             self.go_home(real_height,counter)
-#             self.sLock.release()
             self.connected = await self.apserver(real_height,counter)
             if self.connected:
                 self.stop()
-                self.displayO.show_header("Home",self.wifi,self.aps)
                 self.go_home(real_height,counter)
-            
-#                 machine.soft_reset()
             else:
+                self.go_home(real_height,counter)
                 return False
-#         else:
-#             return True
-#         if self.connected:                
-#             machine.soft_reset()
+
     
     #<style>.center{display:flex;justify-content:center;align-items:center;flex-direction:column}body{display:flex;flex-direction:column;min-height:100vh;position:relative;font-family:Arial,sans-serif;padding:20px}form{width:80%;max-width:600px;margin:0 auto;padding:20px;border-radius:10px;background-color:#f5f5f5}legend{font-size:1.2em;font-weight:700;margin-bottom:10px}input[type=radio]{display:inline-block;margin-right:10px}label{display:inline-block;padding-bottom:5px}hr{border:none;height:1px;background-color:#ccc;margin:10px 0}input[type=submit]{background-color:#4caf50;color:#fff;padding:12px 20px;border:none;border-radius:4px;cursor:pointer;margin-top:20px}input[type=submit]:hover{background-color:#45a049}ul{list-style:none;padding:0;margin:0;text-align:center}li{display:inline-block;margin:20px}a{color:#333;text-decoration:none;font-size:1.2em}a:hover{color:#4caf50}.label-radio-container{display: flex;align-items: center;}</style>
     def htmlssid(self):
@@ -250,6 +240,7 @@ class Wifi:
                 return success, 200, {'Content-Type': 'text/html'}
             else:
                 print("here")
+                self.go_home(real_height,counter)
                 return redirect('/?error=true')
             
             
@@ -264,6 +255,7 @@ class Wifi:
                 self.stop()
                 self.go_home(real_height,counter)
             else:
+                self.go_home(real_height,counter)
                 return redirect('/?error=true')
             
         app.run(port=80,debug=True)

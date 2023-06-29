@@ -11,8 +11,9 @@ import machine
         
 current_m = ".."
 menu_list = ["..", "WiFi","Configuration", "Lock Unlock", "Show Presets", "Show min/max", "Collision Reset", "Factory Reset"]
-conf_menu = ["Go back","Sleep after"]
+conf_menu = ["Go back","Sleep after","Set min/max"]
 menu = ["Back to Wifi","Connect","Forget"]
+mm = ["Back to Conf","Min","Max"]
 chosen_wf = ""
 def move_motor(button,calibration=False):
     motorO.move_motor(button,up_button,outA,outB,calibrationO.min_encoder, calibrationO.max_encoder, calibration )          
@@ -88,6 +89,7 @@ def config_menu():
     displayO.oled.fill(0)
     displayO.show_frame()
     menuO.cf_state = True #mimic menustate
+    menuO.cf_h_state = False
     menuO.wc_state = False
     menuO.wc_c_state = False
     menuO.s_w_state = False
@@ -113,7 +115,7 @@ def wifi_menu():
         displayO.show_menu(wifiO.nearby, line, menuO.highlight, menuO.shift,min(len(wifiO.nearby),menuO.total_lines),"Wifi",wifiO.wifi,wifiO.aps)
     else:
         menuO.presets_state = True
-        displayO.text_frame("Start AP, Connect to PicoW:waliori123 then visit 192.168.4.1")
+        displayO.text_frame("Start AP, PicoW:waliori123 then visit 192.168.4.1")
         displayO.show_header("WiFi",wifiO.wifi,wifiO.aps)
         displayO.oled.show()
     sLock.release()
@@ -167,6 +169,9 @@ def go_home():
     menuO.wc_state = False
     menuO.wc_c_state = False
     menuO.cf_state = False
+    menuO.cf_h_state=False
+    menuO.min_state = False
+    menuO.max_state = False
     menuO.presets_state = False
     menuO.slp_state=False
     menuO.forget_w_state = False
@@ -175,23 +180,18 @@ def go_home():
     
 def go_back():
     global current_m, menu_list
-    if current_m in ["Show IP"]:
+    print(current_m)
+    if current_m in ["Show IP","Back to Wifi"]:
         current_m = "WiFi"
         wifi_menu()
-    elif current_m in ["WiFi","Lock Unlock", "Show Presets", "Show min/max", "Collision Reset", "Factory Reset","Configuration"]:
+    elif current_m in ["WiFi","Lock Unlock", "Show Presets", "Show min/max", "Collision Reset", "Factory Reset","Configuration","Go back"]:
         show_menu(menu_list)
-    elif current_m in ["Sleep after"]:
+    elif current_m in ["Sleep after","Back to Conf"]:
         current_m = "Configuration"
         config_menu()
     elif current_m == "..":
         go_home()
 
-def back_m():
-    global menu_list
-    show_menu(menu_list)
-def back_w():
-    current_m = "WiFi"
-    wifi_menu()
 def stop_ap():
     wifiO.stop()
     go_home()
@@ -218,7 +218,48 @@ def list_saved_wifi():
     displayO.show_frame()  
     displayO.show_menu(w_l, line, menuO.highlight, menuO.shift,min(len(w_l),menuO.total_lines),"Wifis",wifiO.wifi,wifiO.aps)
     
+def set_minmax():
+    sLock.acquire()
+    global mm
+    menuO.highlight = 1
+    menuO.cf_h_state =True
+    menuO.cf_state = False    
+    line = 1  
+    displayO.oled.fill(0)
+    displayO.show_frame()  
+    displayO.show_menu(mm, line, menuO.highlight, menuO.shift,min(len(mm),menuO.total_lines),"min/max",wifiO.wifi,wifiO.aps)
+    sLock.release()
 
+def min_m():
+    sLock.acquire()
+    menuO.min_state = True
+    menuO.max_state = False
+    preset_list = ["Turn KNOB to", "set min height"]
+    displayO.show_static_frame(preset_list,len(preset_list))
+    displayO.show_header("Min",wifiO.wifi,wifiO.aps)
+    displayO.oled.show()
+    sLock.release()
+    
+def set_min(height):
+    menuO.min_state = False
+    calibrationO.set_min(height)
+    set_minmax()
+
+def set_max(height):
+    menuO.max_state = False
+    calibrationO.set_max(height)
+    set_minmax()
+    
+def max_m():
+    sLock.acquire()
+    menuO.max_state = True
+    menuO.min_state = False
+    preset_list = ["Turn KNOB to", "set max height"]
+    displayO.show_static_frame(preset_list,len(preset_list))
+    displayO.show_header("Max",wifiO.wifi,wifiO.aps)
+    displayO.oled.show()
+    sLock.release()
+    
 def launch(item):
   global current_m,chosen_wf
   current_m = item
@@ -234,15 +275,19 @@ def launch(item):
     "Collision Reset": confirm_reset_collision,
     "Disconnect": disconnect,
     "Scan again": wifi_menu,
-    "Go back": back_m,
-    "Back to Wifi": back_w,
+    "Go back": go_back,
+    "Back to Wifi": go_back,
     "Configuration": config_menu,
     "Sleep after": set_sleep,
     "Start AP": start_ap,
     "Stop AP": stop_ap,
     "Connect": connect_c_wifi,
     "Forget": forget_wf,
-    "Saved WiFi": list_saved_wifi
+    "Saved WiFi": list_saved_wifi,
+    "Set min/max": set_minmax,
+    "Back to Conf": go_back,
+    "Min": min_m,
+    "Max": max_m
   }
   if wifiO.saved_json:
       w_l=list(wifiO.saved_json.keys())
@@ -500,9 +545,13 @@ def set_sleep_value(sleep_value):
 
 # @micropython.native
 def task_display_navigation():
-    global menu_list, start_tm, conf_menu, menu, chosen_wf
+    global menu_list, start_tm, conf_menu, menu, chosen_wf, mm
     height_value = 0
     height_previousValue = 1
+    min_height_value = calibrationO.min_real
+    min_height_previousValue = calibrationO.min_real+1
+    max_height_value = calibrationO.max_real
+    max_height_previousValue = calibrationO.max_real+1
     speed_value = 0
     speed_previousValue = 1
     sleep_value = calibrationO.sleep_time
@@ -738,6 +787,80 @@ def task_display_navigation():
                 pb_up.press_func(menuO.move_menu_buttons, ("up",conf_menu,"Config",wifiO.wifi,wifiO.aps,))
                 pb_down.press_func(menuO.move_menu_buttons, ("down",conf_menu,"Config",wifiO.wifi,wifiO.aps,))
                 pb_switch.release_func(launch, (conf_menu[(menuO.highlight-1) + menuO.shift],))
+                pb_switch.long_func(go_home, ())
+                pb_one.release_func(disable_button, ())
+                pb_two.release_func(disable_button, ())
+                pb_three.release_func(disable_button, ())
+        elif menuO.cf_h_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
+            if menuO.min_state:
+                pb_up.press_func(disable_button, ())
+                pb_down.press_func(disable_button, ())
+                pb_one.press_func(toggle_01, ())
+                pb_two.press_func(toggle_10, ())
+                pb_three.press_func(toggle_100, ())
+                pb_switch.release_func(set_min, (min_height_value,))
+                if min_height_previousValue != step_pin.value():
+                    if step_pin.value() == False:
+                        if direction_pin.value() == False:
+                            if min_height_value > 0:
+                                if calibrationO._01:
+                                    min_height_value = max(min_height_value-0.1, 0)
+                                elif calibrationO._10:
+                                   min_height_value = max(min_height_value - 10, 0)
+                                elif calibrationO._100:
+                                    min_height_value = max(min_height_value - 100, 0)
+                                else:
+                                    min_height_value  = max(min_height_value - 1, 0)
+                        else:
+                            if calibrationO._01:
+                                min_height_value +=0.1
+                            elif calibrationO._10:
+                               min_height_value +=10
+                            elif calibrationO._100:
+                                min_height_value +=100
+                            else:
+                                min_height_value +=1
+                        displayO.show_header("Min",wifiO.wifi,wifiO.aps)
+                        displayO.show_height_frame(str(round(min_height_value,1)),0)
+                    min_height_previousValue = step_pin.value()
+                    utime.sleep_ms(1)
+            elif menuO.max_state:
+                pb_up.press_func(disable_button, ())
+                pb_down.press_func(disable_button, ())
+                pb_one.press_func(toggle_01, ())
+                pb_two.press_func(toggle_10, ())
+                pb_three.press_func(toggle_100, ())
+                pb_switch.release_func(set_max, (max_height_value,))
+                if max_height_previousValue != step_pin.value():
+                    if step_pin.value() == False:
+                        if direction_pin.value() == False:
+                            if max_height_value > 0:
+                                if calibrationO._01:
+                                    max_height_value = max(max_height_value-0.1, 0)
+                                elif calibrationO._10:
+                                   max_height_value = max(max_height_value - 10, 0)
+                                elif calibrationO._100:
+                                    max_height_value = max(max_height_value - 100, 0)
+                                else:
+                                    max_height_value  = max(max_height_value - 1, 0)
+                        else:
+                            if calibrationO._01:
+                                max_height_value +=0.1
+                            elif calibrationO._10:
+                               max_height_value +=10
+                            elif calibrationO._100:
+                                max_height_value +=100
+                            else:
+                                max_height_value +=1
+                        displayO.show_header("Min",wifiO.wifi,wifiO.aps)
+                        displayO.show_height_frame(str(round(max_height_value,1)),0)
+                    max_height_previousValue = step_pin.value()
+                    utime.sleep_ms(1)
+            else:
+                menuO.move_menu_encoder(step_pin,direction_pin,mm,"min/max",wifiO.wifi,wifiO.aps)                                  
+                pb_up.press_func(menuO.move_menu_buttons, ("up",mm,"min/max",wifiO.wifi,wifiO.aps,))
+                pb_down.press_func(menuO.move_menu_buttons, ("down",mm,"min/max",wifiO.wifi,wifiO.aps,))
+                pb_switch.release_func(launch, (mm[(menuO.highlight-1) + menuO.shift],))
                 pb_switch.long_func(go_home, ())
                 pb_one.release_func(disable_button, ())
                 pb_two.release_func(disable_button, ())
