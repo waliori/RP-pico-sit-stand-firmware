@@ -971,11 +971,10 @@ def toggle_server(loop,operation):
         async def a_get_presets():
             presets = presetsO.presets
             if not presets:
-                string = "no presets yet."
+                preset_list = []
             else:
-                preset_list = ["{}: {}".format(k, calibrationO.real_height(v)) for k, v in presets.items()]        
-                string = ' - '.join(preset_list)
-            return string            
+                preset_list = ["{}: {}".format(k, calibrationO.real_height(v)) for k, v in presets.items()]
+            return json.dumps(d)            
 
         async def a_forward():
             motorO.api = True
@@ -1019,13 +1018,19 @@ def toggle_server(loop,operation):
         
         @wifiO.app.route('/')#TODO change for cors
         async def hello(request):
-            return 'Hello world'
+            return 'waliori smart sit/stand table'
 
         @wifiO.app.route('/go_preset')#TODO change for cors
         async def preset(request):
 #             global current_task
             current_task = asyncio.create_task(a_go_to_preset(request.args['preset']))
-            return 'Ok'
+            res= None
+            res = Response(res)
+            res.status_code = 200
+            res.headers["Access-Control-Allow-Origin"] = '*'
+            res.headers["Access-Control-Allow-Methods"] = '*'
+            res.body = json.dumps({"status": "ok"})              
+            return res
 
         @wifiO.app.route('/get_height',methods=['GET', 'OPTIONS'])
         async def get_height(request):            
@@ -1055,7 +1060,13 @@ def toggle_server(loop,operation):
         @wifiO.app.route('/get_presets')#TODO change for cors
         async def get_presets(request):
             current_task = await asyncio.create_task(a_get_presets())
-            return current_task
+            res= None
+            res = Response(res)
+            res.status_code = 200
+            res.headers["Access-Control-Allow-Origin"] = '*'
+            res.headers["Access-Control-Allow-Methods"] = '*'
+            res.body = current_task              
+            return res
         
         @wifiO.app.route('/forward',methods=['GET', 'OPTIONS'])
         async def forward(request):
