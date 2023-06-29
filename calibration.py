@@ -144,7 +144,7 @@ class Calibration:
         utime.sleep(1)
         self.displayO.oled.fill(0)
         self.displayO.show_header("Home",self.wifi,self.aps)
-        self.displayO.show_height_frame(str(self.real_height(self.motorO.counter),0))
+#         self.displayO.show_height_frame(str(self.real_height(self.motorO.counter),0))
         self.sLock.release()
         self.idle_state = True
         

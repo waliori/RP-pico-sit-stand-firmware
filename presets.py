@@ -19,7 +19,7 @@ class Presets:
     def get_preset(self,preset):
         presets = open("presets.json","r")
         prestes_json = json.loads(presets.read())
-        if not prestes_json:
+        if not prestes_json or not preset in prestes_json:
             return False
         return prestes_json[preset]
     
