@@ -3,6 +3,7 @@ import _thread
 from abutton import Pushbutton
 import uasyncio
 from time import time
+import machine
 # import math
 
 # Motor Section
@@ -11,7 +12,8 @@ from time import time
 current_m = ".."
 menu_list = ["..", "WiFi","Configuration", "Lock Unlock", "Show Presets", "Show min/max", "Collision Reset", "Factory Reset"]
 conf_menu = ["Go back","Sleep after"]
-
+menu = ["Back to Wifi","Connect","Forget"]
+chosen_wf = ""
 def move_motor(button,calibration=False):
     motorO.move_motor(button,up_button,outA,outB,calibrationO.min_encoder, calibrationO.max_encoder, calibration )          
             
@@ -31,12 +33,29 @@ def show_menu(menu):
 def disconnect():
     wifiO.disconnect()
     go_home()
-
+    
+def forget_wf(wifi):
+    sLock.acquire()
+    displayO.oled.fill(0)
+    displayO.show_header(wifi,wifiO.wifi,wifiO.aps)
+    displayO.show_frame()
+    displayO.text_frame(f"Forget {wifi}, do you confirm?")
+    menuO.forget_w_state = True
+    menuO.wc_state = False
+    menuO.wc_c_state = False
+    sLock.release()
+    
+def forget_wifi(wifi):
+    print(wifi)
+    wifiO.forget_wifi(wifi)
+    go_home()
+    
 def connect_c_wifi(wifi):
 #     sLock.acquire()
     connected = wifiO.connect(wifi,wifiO.saved_json[wifi])
 #     sLock.release()
     if connected:
+        toggle_server(loop,'start')
         go_home()
     else:
         displayO.oled.fill(0)
@@ -70,6 +89,8 @@ def config_menu():
     displayO.show_frame()
     menuO.cf_state = True #mimic menustate
     menuO.wc_state = False
+    menuO.wc_c_state = False
+    menuO.s_w_state = False
     menuO.presets_state = False
     displayO.show_menu(conf_menu, line, menuO.highlight, menuO.shift,min(len(conf_menu),menuO.total_lines),"Config",wifiO.wifi,wifiO.aps)
     sLock.release()
@@ -84,18 +105,21 @@ def wifi_menu():
     displayO.show_frame()
     if wifiO.saved_json:
         menuO.wc_state = True #mimic menustate
+        menuO.wc_c_state = False
+        menuO.s_w_state = False
         menuO.cf_state = False
         menuO.presets_state = False
         wifiO.nearby_wifis()
         displayO.show_menu(wifiO.nearby, line, menuO.highlight, menuO.shift,min(len(wifiO.nearby),menuO.total_lines),"Wifi",wifiO.wifi,wifiO.aps)
     else:
         menuO.presets_state = True
-        displayO.text_frame("Connect to PicoW:waliori123 then visit 192.168.4.1")
+        displayO.text_frame("Start AP, Connect to PicoW:waliori123 then visit 192.168.4.1")
         displayO.show_header("WiFi",wifiO.wifi,wifiO.aps)
         displayO.oled.show()
     sLock.release()
 
 def connect_wifi():
+    menuO.highlight = 1
     menuO.menu_state = False
     calibrationO.idle_state = False
     line = 1    
@@ -103,7 +127,9 @@ def connect_wifi():
     displayO.show_frame()
     if wifiO.saved_json:
         menuO.wc_state = True #mimic menustate
+        menuO.wc_c_state = False #mimic menustate
         menuO.cf_state = False
+        menuO.s_w_state = False
         menuO.presets_state = False
         displayO.show_menu(wifiO.nearby, line, menuO.highlight, menuO.shift,min(len(wifiO.nearby),menuO.total_lines),"Wifi",wifiO.wifi,wifiO.aps)
     else:
@@ -116,16 +142,34 @@ def connect_wifi():
 
 #     menuO.presets_state = True
 
+
+def c_wifi(wifi):
+    global menu, chosen_wf
+    menuO.highlight = 1
+    menuO.wc_c_state = True #mimic menustate
+    menuO.wc_state = False
+    menuO.s_w_state = False
+    menuO.cf_state = False
+    menuO.presets_state = False
+    chosen_wf = wifi
+    line = 1  
+    displayO.oled.fill(0)
+    displayO.show_frame()  
+    displayO.show_menu(menu, line, menuO.highlight, menuO.shift,min(len(menu),menuO.total_lines),wifi,wifiO.wifi,wifiO.aps)
+
         
 
 
 def go_home():
     sLock.acquire()
     calibrationO.idle_state = True
+    menuO.s_w_state = False
     menuO.wc_state = False
+    menuO.wc_c_state = False
     menuO.cf_state = False
     menuO.presets_state = False
     menuO.slp_state=False
+    menuO.forget_w_state = False
     menuO.go_home(wifiO.wifi,wifiO.aps,calibrationO.real_height,motorO.counter)
     sLock.release()
     
@@ -145,7 +189,9 @@ def go_back():
 def back_m():
     global menu_list
     show_menu(menu_list)
-
+def back_w():
+    current_m = "WiFi"
+    wifi_menu()
 def stop_ap():
     wifiO.stop()
     go_home()
@@ -156,10 +202,25 @@ def start_ap():#when up and restart cannot connect wifi
     utime.sleep(2)
     go_home()
     loop.create_task(wifiO.apserver(calibrationO.real_height,motorO.counter))
+
+def list_saved_wifi():
+    menuO.highlight = 1
+    menuO.s_w_state = True
+    menuO.wc_state = False
+    menuO.wc_c_state = False
+    saved_wifis = wifiO.saved_json
+    w_l = list(saved_wifis.keys())
+    print(w_l,wifiO.ssid)
+    if wifiO.wlan.isconnected():
+        w_l[w_l.index(wifiO.ssid)] = f"->{wifiO.ssid}"
+    line = 1  
+    displayO.oled.fill(0)
+    displayO.show_frame()  
+    displayO.show_menu(w_l, line, menuO.highlight, menuO.shift,min(len(w_l),menuO.total_lines),"Wifis",wifiO.wifi,wifiO.aps)
     
-    
+
 def launch(item):
-  global current_m
+  global current_m,chosen_wf
   current_m = item
 #   sLock.acquire()
   actions = {
@@ -174,20 +235,32 @@ def launch(item):
     "Disconnect": disconnect,
     "Scan again": wifi_menu,
     "Go back": back_m,
+    "Back to Wifi": back_w,
     "Configuration": config_menu,
     "Sleep after": set_sleep,
     "Start AP": start_ap,
-    "Stop AP": stop_ap
+    "Stop AP": stop_ap,
+    "Connect": connect_c_wifi,
+    "Forget": forget_wf,
+    "Saved WiFi": list_saved_wifi
   }
   if wifiO.saved_json:
-      for wf in wifiO.saved_json.keys():
-          actions[wf] = connect_c_wifi
+      w_l=list(wifiO.saved_json.keys())
+      w_l.extend([f"->{w}" for w in w_l])
+      for wf in w_l:
+          actions[wf] = c_wifi
+#           actions[wf] = connect_c_wifi
+    
 #   sLock.release()
-  print(f"current menu: {current_m}, and chosen menu item: {item}")
   default_action = lambda: print("No action defined for this item")
   action = actions.get(item, default_action)
-  if wifiO.saved_json and item in wifiO.saved_json:
-    action(item)
+  if wifiO.saved_json and any(x in w_l for x in [item,f"->{item}"]):
+    if not '->' in item:
+      action(item)
+    else:
+      action(item.replace("->",""))
+  elif item in ["Connect", "Forget"]:
+    action(chosen_wf)
   else:
     action()
   
@@ -323,7 +396,7 @@ def show_calibration():
     displayO.oled.fill(0)
     displayO.show_frame()
     displayO.show_static_frame(min_max,len(min_max))
-    displayO.show_header("Table min/max",wifiO.wifi,wifiO.aps)
+    displayO.show_header("Min/Max",wifiO.wifi,wifiO.aps)
     displayO.oled.show()
     sLock.release()
     
@@ -332,6 +405,7 @@ def show_ip():
 #     sLock.acquire()
     menuO.presets_state = True
     menuO.wc_state = False
+    menuO.wc_c_state = False
     menuO.menu_state = False
     calibrationO.idle_state = False
     motorO.api = False
@@ -386,7 +460,7 @@ def awake():
 #     timeo = 0
     start_tm = time()
     if time() - start_tm >= calibrationO.sleep_time:
-        print("here")
+#         print("here")
         menuO.go_home(wifiO.wifi,wifiO.aps,calibrationO.real_height,motorO.counter)
     sLock.release()                                                                                                                                              
     
@@ -426,7 +500,7 @@ def set_sleep_value(sleep_value):
 
 # @micropython.native
 def task_display_navigation():
-    global menu_list, start_tm, conf_menu
+    global menu_list, start_tm, conf_menu, menu, chosen_wf
     height_value = 0
     height_previousValue = 1
     speed_value = 0
@@ -439,7 +513,7 @@ def task_display_navigation():
         if not calibrationO.calibrated and not calibrationO.semi_calibrated and not calibrationO.idle_state and not calibrationO.speed_calibrated:
             pb_up.press_func(move_motor, (up_button,True))
             pb_down.press_func(move_motor, (down_button,True))
-            pb_switch.long_func(calibrationO.semi_calibrate, ())
+            pb_switch.release_func(calibrationO.semi_calibrate, ())
         # not calibrated but semi calibrated and not idle (highest point set) 
         elif not calibrationO.calibrated and  calibrationO.semi_calibrated and not calibrationO.idle_state and not calibrationO.speed_calibrated:
             # not real semi calibrated ()
@@ -449,7 +523,7 @@ def task_display_navigation():
                 pb_one.press_func(toggle_01, ())
                 pb_two.press_func(toggle_10, ())
                 pb_three.press_func(toggle_100, ())
-                pb_switch.long_func(calibrationO.real_semi_calibrate, (height_value,))
+                pb_switch.release_func(calibrationO.real_semi_calibrate, (height_value,))
                 
                 if height_previousValue != step_pin.value():
                     if step_pin.value() == False:
@@ -480,7 +554,7 @@ def task_display_navigation():
             elif calibrationO.real_semi_calibrated:
                 pb_up.press_func(move_motor, (up_button,True))
                 pb_down.press_func(move_motor, (down_button,True))
-                pb_switch.long_func(calibrationO.calibrate, ())
+                pb_switch.release_func(calibrationO.calibrate, ())
         # if calibrated and semi_calibrated and not idle (Highest point Done, starting lower)
         elif calibrationO.calibrated and  calibrationO.semi_calibrated and not calibrationO.idle_state and not calibrationO.speed_calibrated:
             # calibrated but not real calibrated 
@@ -490,7 +564,7 @@ def task_display_navigation():
                 pb_one.press_func(toggle_01, ())
                 pb_two.press_func(toggle_10, ())
                 pb_three.press_func(toggle_100, ())
-                pb_switch.long_func(calibrationO.real_calibrate, (height_value,))
+                pb_switch.release_func(calibrationO.real_calibrate, (height_value,))
                 if height_previousValue != step_pin.value():
                     if step_pin.value() == False:
                         if direction_pin.value() == False:
@@ -586,6 +660,36 @@ def task_display_navigation():
             pb_up.press_func(menuO.move_menu_buttons, ("up",wifiO.nearby,"Wifi",wifiO.wifi,wifiO.aps,))
             pb_down.press_func(menuO.move_menu_buttons, ("down",wifiO.nearby,"Wifi",wifiO.wifi,wifiO.aps,))
             pb_switch.release_func(launch, (wifiO.nearby[(menuO.highlight-1) + menuO.shift],))
+            pb_switch.long_func(go_home, ())
+            pb_one.release_func(disable_button, ())
+            pb_two.release_func(disable_button, ())
+            pb_three.release_func(disable_button, ())
+        elif menuO.wc_c_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
+            menuO.move_menu_encoder(step_pin,direction_pin,menu,chosen_wf,wifiO.wifi,wifiO.aps)                                  
+            pb_up.press_func(menuO.move_menu_buttons, ("up",menu,chosen_wf,wifiO.wifi,wifiO.aps,))
+            pb_down.press_func(menuO.move_menu_buttons, ("down",menu,chosen_wf,wifiO.wifi,wifiO.aps,))
+            pb_switch.release_func(launch, (menu[(menuO.highlight-1) + menuO.shift],))
+            pb_switch.long_func(go_home, ())
+            pb_one.release_func(disable_button, ())
+            pb_two.release_func(disable_button, ())
+            pb_three.release_func(disable_button, ())
+        elif menuO.forget_w_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
+            pb_up.press_func(disable_button, ())
+            pb_down.press_func(disable_button, ())
+            pb_switch.release_func(forget_wifi, (chosen_wf,))
+            pb_switch.long_func(go_home, ())
+            pb_one.release_func(disable_button, ())
+            pb_two.release_func(disable_button, ())
+            pb_three.release_func(disable_button, ())
+        elif menuO.s_w_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
+            saved_wifis = wifiO.saved_json
+            w_l = list(saved_wifis.keys())
+            if wifiO.wlan.isconnected():
+                w_l[w_l.index(wifiO.ssid)] = f"->{wifiO.ssid}"
+            menuO.move_menu_encoder(step_pin,direction_pin,w_l,"Wifis",wifiO.wifi,wifiO.aps)                                  
+            pb_up.press_func(menuO.move_menu_buttons, ("up",w_l,"Wifis",wifiO.wifi,wifiO.aps,))
+            pb_down.press_func(menuO.move_menu_buttons, ("down",w_l,"Wifis",wifiO.wifi,wifiO.aps,))
+            pb_switch.release_func(launch, (w_l[(menuO.highlight-1) + menuO.shift],))
             pb_switch.long_func(go_home, ())
             pb_one.release_func(disable_button, ())
             pb_two.release_func(disable_button, ())
@@ -738,8 +842,9 @@ def toggle_server(loop,operation):
             return str(calibrationO.real_height(motorO.counter))
 
         async def a_get_minmax():
+            d= {"min": calibrationO.min_real, "max":calibrationO.max_real}
             string = "Min: {}cm".format(calibrationO.min_real)+' - '+"Max: {}cm".format(calibrationO.max_real)
-            return string
+            return json.dumps(d)
 
         async def a_get_presets():
             presets = presetsO.presets
@@ -816,7 +921,14 @@ def toggle_server(loop,operation):
         async def get_minmax(request):
 #             global current_task
             current_task = await asyncio.create_task(a_get_minmax())
-            return current_task
+            res= None
+            res = Response(res)
+            res.status_code = 200
+            res.headers["Access-Control-Allow-Origin"] = '*'
+            res.headers["Access-Control-Allow-Methods"] = '*'
+            res.body = current_task              
+            return res
+#             return current_task
 
         @wifiO.app.route('/get_presets')#TODO change for cors
         async def get_presets(request):

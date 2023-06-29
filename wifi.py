@@ -27,8 +27,6 @@ class Wifi:
         self.ap.active(False)
         self.aps = n_a_ico
         self.ap.config(essid=self.apssid, password=self.appassword)
-        self.ip = ""
-        self.ssid = ""
         self.string = ""
         self.app = app
         self.server = False
@@ -38,8 +36,12 @@ class Wifi:
         self.nearby = []
         if self.wlan.isconnected():
             self.wifi = y_ico
+            self.ssid = self.wlan.config("ssid")
+            self.ip = self.wlan.ifconfig()[0]
         else:
             self.wifi = n_ico
+            self.ip = ""
+            self.ssid = ""
 
             
            
@@ -79,18 +81,22 @@ class Wifi:
                 if self.open:
                     self.nearby.append(ssid)
         self.nearby.append("Scan again")
-        if self.wlan.isconnected():
+        if self.wlan.isconnected() and self.wlan.config("ssid") in self.nearby:
             self.nearby.remove(self.wlan.config("ssid"))
             self.nearby.insert(len(self.nearby)-1,"Show IP")
             self.nearby.insert(len(self.nearby)-1,"Disconnect")
         else:
             print("AP state")
             print(self.ap.active())
-            if self.ap.active():
+            if self.apmode: #self.ap.active():
                 self.nearby.insert(len(self.nearby)-1,"Stop AP")
             else:
                 self.nearby.insert(len(self.nearby)-1,"Start AP")
         
+        self.nearby.insert(len(self.nearby)-1,"Saved WiFi")
+    
+
+    
     async def start_connection(self,real_height,counter):
         if self.wlan.isconnected():
             self.connected = True
@@ -161,15 +167,32 @@ class Wifi:
         htmldoc +=  """</fieldset><input type="submit" value="Connect"></form></div><script>if(window.location.search != ""){document.getElementById("error").hidden = false}</script>"""
         return htmldoc
     
+    def forget_wifi(self,ssid):
+        self.sLock.acquire()
+        wifis = open("saved_wifi.json","r")
+        wifis_json = json.loads(wifis.read())
+        wifis.close()
+        print(wifis_json)
+        del wifis_json[ssid]
+        print(wifis_json)
+        file=open("saved_wifi.json","w")
+        file.write(json.dumps(wifis_json))
+        file.close()
+        self.saved_json = wifis_json
+        self.sLock.release()
+    
     async def savewifi(self,ssid,password):
         if self.connect(ssid,password):            
             self.sLock.acquire()
             wifis = open("saved_wifi.json","r")
             wifis_json = json.loads(wifis.read())
+            wifis.close()
             print(wifis_json)
             wifis_json[ssid] = password
             file=open("saved_wifi.json","w")
             file.write(json.dumps(wifis_json))
+            file.close()
+            self.saved_json = wifis_json
             self.sLock.release()
             return True
         else:
@@ -202,11 +225,11 @@ class Wifi:
         self.apmode = True
         self.ap.active(True)
         self.aps = y_a_ico
-        if self.server:
+        if self.server:#TODO check diff between server and apmode
             self.app.shutdown()
             self.server = False
         app = self.app
-        print('Connect to WiFi ssid ' + self.apssid + ', password: ' + self.appassword)
+        print('Connect to WiFi ssid ' + self.apssid + ',password: ' + self.appassword)
         print('and access 192.168.4.1 with a web browser')
                 
         html = self.htmlssid
@@ -243,14 +266,18 @@ class Wifi:
             else:
                 return redirect('/?error=true')
             
-        
         app.run(port=80,debug=True)
         self.app = app
+        self.server = True
     
     
     
     def stop(self):
+        if self.apmode:
+            self.app.shutdown()
+            self.server = False
         self.ap.active(False)
+        print(self.ap.active())
         self.apmode = False
         self.aps = n_a_ico
                 
@@ -262,12 +289,21 @@ class Wifi:
         self.ssid = ""
         self.connected = False
         
-    def connect(self, ssid, password, retries=100, verbose = True):
+    def connect(self, ssid, password, retries=100, verbose = True):        
         self.sLock.acquire()
-        if self.wlan.isconnected():
-            self.wifi = y_ico
-            self.stop()
-            return True        
+        if ssid != self.ssid:
+            print('here')
+            self.wlan.disconnect()
+            print(self.wlan.isconnected())
+            self.wifi = n_ico        
+            self.ip = ""
+            self.ssid = ""
+        else:
+            if self.wlan.isconnected():
+                self.wifi = y_ico
+                self.stop()
+                self.sLock.release()
+                return True                
         self.string = ""
         self.wlan.connect(ssid, password)
         if verbose:

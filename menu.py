@@ -13,8 +13,11 @@ class Menu:
         self.collision_reset_state = False
         self.presets_state = False
         self.wc_state= False
+        self.wc_c_state = False
         self.cf_state = False
         self.slp_state = False
+        self.forget_w_state = False
+        self.s_w_state = False
         
 #     def show_menu(self,menu):
 #         self.displayO.show_menu(menu)
