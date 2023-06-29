@@ -84,7 +84,7 @@ class Calibration:
 #         print(str(self.motorO.counter))
         self.max_encoder = self.motorO.counter
         self.displayO.clear_frame()
-        self.displayO.text_frame("Turn KNOB to set your table's highest height (cm)")
+        self.displayO.text_frame("Turn KNOB to set your table's highest height")
     
     def real_semi_calibrate(self,real_heigh):
         self.real_semi_calibrated = True
@@ -98,7 +98,7 @@ class Calibration:
 #         print(str(self.motorO.counter))
         self.min_encoder = self.motorO.counter
         self.displayO.clear_frame()
-        self.displayO.text_frame("Turn KNOB to set your table's lowest height (cm)")
+        self.displayO.text_frame("Turn KNOB to set your table's lowest height")
     
     def real_calibrate(self,real_heigh):
         self.real_calibrated = True

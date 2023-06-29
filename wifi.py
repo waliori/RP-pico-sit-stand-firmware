@@ -32,7 +32,7 @@ class Wifi:
         self.server = False
         self.connected = False
         self.apmode = False
-        self.open = False
+        self.open = False # to True if we want open wifi suport
         self.nearby = []
         if self.wlan.isconnected():
             self.wifi = y_ico

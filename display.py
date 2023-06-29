@@ -182,7 +182,7 @@ class Display:
         self.oled.show()
         
     def show_height_frame(self,height,rpm=0):
-        text= height+"cm"
+        text= height
         self.clear_frame()
         h,w = get_avg_char_width_height(height,firacodeBold30)
         x=get_center_x(text,128,w)

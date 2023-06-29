@@ -424,7 +424,7 @@ def show_presets():
     if not presets:
         displayO.text_frame("There are no preset settings in place yet.")
     else:
-        preset_list = ["preset {}: {}cm".format(k, calibrationO.real_height(v)) for k, v in presets.items()]
+        preset_list = ["{}: {}".format(k, calibrationO.real_height(v)) for k, v in presets.items()]
         displayO.show_static_frame(preset_list,len(preset_list))
         displayO.show_header("Presets",wifiO.wifi,wifiO.aps)
         displayO.oled.show()
@@ -437,7 +437,7 @@ def show_calibration():
     menuO.menu_state = False
     calibrationO.idle_state = False
     motorO.api = False
-    min_max = ["Min: {}cm".format(calibrationO.min_real), "Max: {}cm".format(calibrationO.max_real)]
+    min_max = ["Min: {}".format(calibrationO.min_real), "Max: {}".format(calibrationO.max_real)]
     displayO.oled.fill(0)
     displayO.show_frame()
     displayO.show_static_frame(min_max,len(min_max))
@@ -966,7 +966,6 @@ def toggle_server(loop,operation):
 
         async def a_get_minmax():
             d= {"min": calibrationO.min_real, "max":calibrationO.max_real}
-            string = "Min: {}cm".format(calibrationO.min_real)+' - '+"Max: {}cm".format(calibrationO.max_real)
             return json.dumps(d)
 
         async def a_get_presets():
@@ -974,7 +973,7 @@ def toggle_server(loop,operation):
             if not presets:
                 string = "no presets yet."
             else:
-                preset_list = ["{}: {}cm".format(k, calibrationO.real_height(v)) for k, v in presets.items()]        
+                preset_list = ["{}: {}".format(k, calibrationO.real_height(v)) for k, v in presets.items()]        
                 string = ' - '.join(preset_list)
             return string            
 
@@ -1037,7 +1036,7 @@ def toggle_server(loop,operation):
             res.status_code = 200
             res.headers["Access-Control-Allow-Origin"] = '*'
             res.headers["Access-Control-Allow-Methods"] = '*'
-            res.body = json.dumps({"height": str(current_task)+'cm'})              
+            res.body = json.dumps({"height": str(current_task)})              
             return res
             
         @wifiO.app.route('/get_minmax')#TODO change for cors
