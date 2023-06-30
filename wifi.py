@@ -225,7 +225,6 @@ class Wifi:
         html = self.htmlssid
         @app.route('/')
         async def hello(request):
-            print("here")
             return html(), 200, {'Content-Type': 'text/html'}
 
 
@@ -239,7 +238,6 @@ class Wifi:
                 self.go_home(real_height,counter)
                 return success, 200, {'Content-Type': 'text/html'}
             else:
-                print("here")
                 self.go_home(real_height,counter)
                 return redirect('/?error=true')
             
@@ -284,7 +282,6 @@ class Wifi:
     def connect(self, ssid, password, retries=100, verbose = True):        
         self.sLock.acquire()
         if ssid != self.ssid:
-            print('here')
             self.wlan.disconnect()
             print(self.wlan.isconnected())
             self.wifi = n_ico        

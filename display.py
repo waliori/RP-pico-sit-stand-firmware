@@ -8,6 +8,8 @@ import base64
 import math
 
 #display
+sit = bytearray(b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0f\x00\x00\x00\x00\x1f\x00\x00\x00\x00\x1f\x80\x00\x00\x00\x1f\x80\x02\x00\x00\x1f\x80\x03\x80\x00\x0f\x00\x03\x70\x00\x30\x00\x00\x0c\x00\x78\x00\x00\x02\x00\xbc\x00\x00\x02\x20\xfc\x00\x00\x00\x31\xfe\x38\x00\x04\x31\xfd\xfc\x00\x04\x39\xff\xf8\x00\x08\x39\xf7\xfc\x00\x08\x19\xf1\xf3\x80\x08\x1d\xf0\x3f\xff\xf8\x1d\xff\xcf\xff\xe0\x09\xff\xc0\x38\x00\x08\xff\xc0\x30\x00\x00\x01\xc0\x30\x00\x07\xfd\xc0\x38\x00\x01\xe1\xc0\x38\x00\x00\x41\xe0\x38\x00\x00\x41\xe0\x38\x00\x00\x41\xe0\x38\x00\x01\xf1\xe0\x38\x00\x04\x45\xe0\x38\x00\x04\x44\xe7\xff\xc0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+stand = bytearray(b"\x00\x00\x00\x00\x00\x01\xe0\x00\x00\x00\x03\xf0\x00\x00\x00\x03\xf8\x00\x80\x00\x03\xf8\x00\x80\x00\x03\xf0\x00\x80\x00\x01\xf0\x00\xc0\x00\x00\xc0\x00\xf8\x00\x07\x00\x00\xc6\x00\x0d\x80\x00\x80\x80\x0f\x80\x00\x80\x40\x1f\x00\x00\x80\x40\x1f\x80\x00\x80\x40\x1f\x80\x00\x00\x80\x1f\x80\x00\x00\x80\x1f\xff\x00\x01\x00\x1e\xff\x00\x01\x00\x1f\xff\x00\x01\x00\x1f\x00\x00\x00\x00\x1f\x07\xff\xfe\x00\x0f\x10\xff\xf0\x00\x07\x00\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x03\x83\xff\xf8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
 
 def get_center_x(text, area_width,avg_char_width):
     text_width = len(text)*avg_char_width
@@ -56,6 +58,7 @@ class Display:
         self.freq = freq
         i2c = I2C(1, scl=Pin(scl), sda=Pin(sda), freq=freq)
         self.oled = SH1106_I2C(width, height, i2c)
+        self.oled.invert(False)
         self.font_writer_20 = writer.Writer(self.oled, freesans20)
         self.font_writer_30 = writer.Writer(self.oled, firacodeBold30)
         self.title_height = 12
@@ -66,7 +69,8 @@ class Display:
         self.menu_list_length = 0
         self.menu_total_lines = 5
         self.lock_state = False
-        self.sleep_state = False
+        self.sleep_state = False        
+        self.rem_state = False
 
     
         
@@ -175,32 +179,55 @@ class Display:
     def show_height(self,height):
         self.oled.fill(0)
         h,w = get_avg_char_width_height(height,firacodeBold30)
-        x=get_center_x(height,128,w)
-        y=get_center_y(64,h)
+        x=get_center_x(height,self.width,w)
+        y=get_center_y(self.height,h)
         self.font_writer_30.set_textpos(x, y)
         self.font_writer_30.printstring(height)
         self.oled.show()
         
     def show_height_frame(self,height,rpm=0):
-        text= height
+        height
         self.clear_frame()
         h,w = get_avg_char_width_height(height,firacodeBold30)
-        x=get_center_x(text,128,w)
+        x=get_center_x(height,self.width,w)
         y=get_center_y(self.height-1+ self.title_height+3,h)
         self.font_writer_30.set_textpos(x, y)
-        self.font_writer_30.printstring(text)
+        self.font_writer_30.printstring(height)
         if rpm != 0:
             self.oled.text('RPM: '+str(int(rpm)),60,55)
         self.oled.show()
-
-    def show_sleep_frame(self,time):
+    
+    def show_reminder_frame(self):
+        self.oled.fill(0)
+        self.clear_frame()
+        text= ">>>"
+        header = "Reminder"
+        self.draw_frame(0,0,self.width-1,self.title_height+1)
+        self.oled.fill_rect(0,0,self.width-1,self.title_height+1,1)
+        h,w = get_avg_char_width_height(text,freesans20)
+        x=get_center_x(text,self.width,w)
+        y=get_center_y(self.height-1+ self.title_height+3,h)
+        self.font_writer_20.set_textpos(x, y)
+        self.font_writer_20.printstring(text)
+        h,w = get_avg_char_width_height(header)
+        x=get_center_x(header,self.width,w)
+        y=get_center_y(self.title_height,h)
+        self.oled.text(header, x, y,0)
+        sit_fb = framebuf.FrameBuffer(sit, 40, 38, framebuf.MONO_HLSB)
+        stand_fb = framebuf.FrameBuffer(stand, 40, 38, framebuf.MONO_HLSB)
+        y=get_center_y(self.height-1+ self.title_height+3,38)
+        self.oled.blit(sit_fb, 5, y)
+        self.oled.blit(stand_fb, 83, y)
+        self.oled.show()
+        
+    def show_time_frame(self,time):
         if time > 86400:
             text = "Never"
         else:
             text= self.seconds_to_timestamp(time)
         self.clear_frame()
         h,w = get_avg_char_width_height(text,firacodeBold30)
-        x=get_center_x(text,128,w)
+        x=get_center_x(text,self.width,w)
         y=get_center_y(self.height-1+ self.title_height+3,h)
         self.font_writer_30.set_textpos(x, y)
         self.font_writer_30.printstring(text)
@@ -254,5 +281,12 @@ class Display:
         self.oled.init_display()
     def wake(self):
         self.sleep_state = False
-        
+    
+    def alarm(self):
+        self.sleep_state = False
+        self.rem_state = True
+    
+    def stp_alarm(self):
+        self.rem_state = False
+        self.oled.invert(False)
     

@@ -38,8 +38,11 @@ class Calibration:
             self.motorO.max_speed = settings_json["max_speed"]
             self.motorO.min_speed = settings_json["min_speed"]
             self.sleep_time = settings_json["sleep_time"]
+            self.reminder_time = settings_json["reminder_time"]
             if settings_json["sleep_time"] > 86400:
                 self.sleep_time = 86400
+            if settings_json["reminder_time"] > 86400:
+                self.reminder_time = 86400
             self.idle_state = True
             self.semi_calibrated = True
             self.real_semi_calibrated = True        
@@ -54,7 +57,8 @@ class Calibration:
             self.sLock.acquire()
             file=open("settings.json","w")
             self.sleep_time = 30
-            file.write(json.dumps({"sleep_time":30}))
+            self.reminder_time = 5400 #90min
+            file.write(json.dumps({"sleep_time":30,"reminder_time":5400}))
             self.sLock.release()
             self.displayO.oled.fill(0)
             self.displayO.show_header("Calibration",self.wifi,self.aps)

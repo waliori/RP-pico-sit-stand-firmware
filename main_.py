@@ -11,10 +11,11 @@ import machine
         
 current_m = ".."
 menu_list = ["..", "WiFi","Configuration", "Lock Unlock", "Show Presets", "Show min/max", "Collision Reset", "Factory Reset"]
-conf_menu = ["Go back","Sleep after","Set min/max"]
+conf_menu = ["Go back","Sleep after","Set min/max", "Stand reminder"]
 menu = ["Back to Wifi","Connect","Forget"]
 mm = ["Back to Conf","Min","Max"]
 chosen_wf = ""
+
 def move_motor(button,calibration=False):
     motorO.move_motor(button,up_button,outA,outB,calibrationO.min_encoder, calibrationO.max_encoder, calibration )          
             
@@ -73,12 +74,23 @@ def connect_c_wifi(wifi):
 def set_sleep():
     sLock.acquire()
     menuO.slp_state = True
+    menuO.rem_state =False
     preset_list = ["Turn KNOB to", "set time sleep"]
     displayO.show_static_frame(preset_list,len(preset_list))
     displayO.show_header("Sleep",wifiO.wifi,wifiO.aps)
     displayO.oled.show()
     sLock.release()
-
+    
+def stand_rem():
+    sLock.acquire()
+    menuO.rem_state = True
+    menuO.slp_state =False
+    preset_list = ["Turn KNOB to", "set posture reminder"]
+    displayO.show_static_frame(preset_list,len(preset_list))
+    displayO.show_header("Reminder",wifiO.wifi,wifiO.aps)
+    displayO.oled.show()
+    sLock.release()
+    
 def config_menu():
     global conf_menu
     menuO.highlight = 1
@@ -175,6 +187,7 @@ def go_home():
     menuO.presets_state = False
     menuO.slp_state=False
     menuO.forget_w_state = False
+    menuO.rem_state = False
     menuO.go_home(wifiO.wifi,wifiO.aps,calibrationO.real_height,motorO.counter)
     sLock.release()
     
@@ -259,6 +272,8 @@ def max_m():
     displayO.show_header("Max",wifiO.wifi,wifiO.aps)
     displayO.oled.show()
     sLock.release()
+
+
     
 def launch(item):
   global current_m,chosen_wf
@@ -287,7 +302,8 @@ def launch(item):
     "Set min/max": set_minmax,
     "Back to Conf": go_back,
     "Min": min_m,
-    "Max": max_m
+    "Max": max_m,
+    "Stand reminder": stand_rem
   }
   if wifiO.saved_json:
       w_l=list(wifiO.saved_json.keys())
@@ -359,7 +375,7 @@ def disable_button():
 def confirm_reset():
     sLock.acquire()
     displayO.oled.fill(0)
-    displayO.show_header("Factory Reset",wifiO.wifi,wifiO.aps)
+    displayO.show_header("Factory R",wifiO.wifi,wifiO.aps)
     displayO.show_frame()
     displayO.text_frame("All seetings and presets will be wiped, do you confirm?")
     menuO.reset_state = True
@@ -370,7 +386,7 @@ def confirm_reset():
 def confirm_reset_collision():
     sLock.acquire()
     displayO.oled.fill(0)
-    displayO.show_header("Collision Reset",wifiO.wifi,wifiO.aps)
+    displayO.show_header("Collision R",wifiO.wifi,wifiO.aps)
     displayO.show_frame()
     displayO.text_frame("Collision settings will be wiped, do you confirm?")
     menuO.collision_reset_state = True
@@ -496,24 +512,33 @@ pb_three = Pushbutton(three_button, suppress=True)
 
 # timeo = 0
 start_tm = time()
+start_tm_rem = time()
 
 def awake():
     sLock.acquire()
     global start_tm
-#     print(time() - start_tm)
     displayO.wake()
-#     timeo = 0
     start_tm = time()
     if time() - start_tm >= calibrationO.sleep_time:
-#         print("here")
         menuO.go_home(wifiO.wifi,wifiO.aps,calibrationO.real_height,motorO.counter)
     sLock.release()                                                                                                                                              
+
+def stp_rem():
+    sLock.acquire()
+    global start_tm_rem
+    displayO.stp_alarm()
+    start_tm_rem = time()
+    if time() - start_tm_rem >= calibrationO.reminder_time:
+        menuO.go_home(wifiO.wifi,wifiO.aps,calibrationO.real_height,motorO.counter)
+    sLock.release()
     
 def handle_button(fc,args):
     awake()
+    stp_rem()
     fc(*args)
-    global start_tm
+    global start_tm, start_tm_rem
     start_tm = time()
+    start_tm_rem = time()
     
 
 def set_sleep_value(sleep_value):
@@ -532,11 +557,30 @@ def set_sleep_value(sleep_value):
     sLock.release()
     displayO.clear_frame()
     preset_list = ["Done!", "Table will sleep", f"after: {displayO.seconds_to_timestamp(sleep_value)}"]
-    displayO.show_static_frame(preset_list,len(preset_list))
-#     displayO.show_header("Sleep",wifiO.wifi)
-    
-    displayO.oled.show()
-#     displayO.text_frame(f"Done! Table will sleep after {displayO.seconds_to_timestamp(sleep_value)}")        
+    displayO.show_static_frame(preset_list,len(preset_list))  
+    displayO.oled.show()      
+    utime.sleep(2)
+    displayO.oled.fill(0)
+    config_menu()
+
+def set_rem_value(rem_value):
+    menuO.rem_state=False
+    if rem_value == 0 or rem_value == 86400:
+        rem_value = sys.maxsize
+    calibrationO.reminder_time = rem_value
+    sLock.acquire()
+    file=open("settings.json","r")
+    settings_json = json.loads(file.read())
+    settings_json["reminder_time"] = rem_value
+    file.close()
+    file=open("settings.json","w")
+    file.write(json.dumps(settings_json))
+    file.close()
+    sLock.release()
+    displayO.clear_frame()
+    preset_list = ["Done!", "Change Posture", f"in: {displayO.seconds_to_timestamp(rem_value)}"]
+    displayO.show_static_frame(preset_list,len(preset_list))  
+    displayO.oled.show()      
     utime.sleep(2)
     displayO.oled.fill(0)
     config_menu()
@@ -545,7 +589,7 @@ def set_sleep_value(sleep_value):
 
 # @micropython.native
 def task_display_navigation():
-    global menu_list, start_tm, conf_menu, menu, chosen_wf, mm
+    global menu_list, start_tm, start_tm_rem, conf_menu, menu, chosen_wf, mm
     height_value = 0
     height_previousValue = 1
     min_height_value = calibrationO.min_real
@@ -556,6 +600,9 @@ def task_display_navigation():
     speed_previousValue = 1
     sleep_value = calibrationO.sleep_time
     sleep_previousValue = calibrationO.sleep_time+1
+    rem_value = calibrationO.reminder_time
+    rem_previousValue = calibrationO.reminder_time+1
+    x=True
     while True:
         sLock.acquire()
         # not calibrated and not semi calibrated and not idle (AKA first boot of the system)
@@ -777,11 +824,45 @@ def task_display_navigation():
                                 else:
                                     sleep_value +=1
                         displayO.show_header("Sleep",wifiO.wifi,wifiO.aps)
-                        displayO.show_sleep_frame(sleep_value)
+                        displayO.show_time_frame(sleep_value)
                     sleep_previousValue = step_pin.value()
                     utime.sleep_ms(1)
-            
-
+            elif menuO.rem_state:
+                pb_up.press_func(disable_button, ())
+                pb_down.press_func(disable_button, ())
+                pb_one.press_func(toggle_01, ())
+                pb_two.press_func(toggle_10, ())
+                pb_three.press_func(toggle_100, ())
+                pb_switch.long_func(go_home, ())
+                pb_switch.release_func(set_rem_value,(rem_value,))
+#                 if sleep_value <= 86400:
+                if rem_previousValue != step_pin.value():
+                    if step_pin.value() == False:
+                        if direction_pin.value() == False:
+                            if rem_value > 0:
+                                if calibrationO._01:
+                                    rem_value = max(rem_value - 10, 0)
+                                elif calibrationO._10:
+                                   rem_value = max(rem_value - 60, 0)
+                                elif calibrationO._100:
+                                    rem_value = max(rem_value - 3600, 0)
+                                else:
+                                    rem_value  = max(rem_value - 1, 0)
+                                
+                        else:
+                            if rem_value <= 86400:
+                                if calibrationO._01:
+                                    rem_value +=10
+                                elif calibrationO._10:
+                                   rem_value +=60
+                                elif calibrationO._100:
+                                    rem_value +=3600
+                                else:
+                                    rem_value +=1
+                        displayO.show_header("Reminder",wifiO.wifi,wifiO.aps)
+                        displayO.show_time_frame(rem_value)
+                    rem_previousValue = step_pin.value()
+                    utime.sleep_ms(1)
             else:
                 menuO.move_menu_encoder(step_pin,direction_pin,conf_menu,"Config",wifiO.wifi,wifiO.aps)                                  
                 pb_up.press_func(menuO.move_menu_buttons, ("up",conf_menu,"Config",wifiO.wifi,wifiO.aps,))
@@ -896,11 +977,9 @@ def task_display_navigation():
                     pb_down.press_func(handle_button, (move_motor, (down_button,)))
                     
                 #addig to that, we display current real height and handle buttons
-                if not displayO.sleep_state and not menuO.menu_state and not displayO.lock_state and calibrationO.speed_calibrated:
-#                     print(timeo)
+                if (not displayO.sleep_state and not displayO.rem_state) and not menuO.menu_state and not displayO.lock_state and calibrationO.speed_calibrated:
                     displayO.show_header("Home",wifiO.wifi,wifiO.aps)
                     displayO.show_height_frame(str(calibrationO.real_height(motorO.counter)),motorO.rpm)
-#                     displayO.show_header("Home",wifi)
                     pb_up.press_func(handle_button, (move_motor, (up_button,)))
                     pb_down.press_func(handle_button, (move_motor,(down_button,)))
                     pb_switch.release_func(show_menu, (menu_list,))
@@ -911,11 +990,28 @@ def task_display_navigation():
                     pb_one.long_func(set_preset, ('1',))
                     pb_two.long_func(set_preset, ('2',))
                     pb_three.long_func(set_preset, ('3',))
+                    if time() - start_tm_rem >= calibrationO.reminder_time:
+                        displayO.alarm()
                     if time() - start_tm >= calibrationO.sleep_time:
                         displayO.dim()
-#                     timeo += 1
-#                     if timeo >= dim_t:
-#                         displayO.dim()
+                    
+                        
+                elif displayO.rem_state and not menuO.menu_state and not displayO.lock_state and calibrationO.speed_calibrated:
+                    pb_up.press_func(stp_rem, ())
+                    pb_down.press_func(stp_rem, ())
+                    pb_switch.release_func(stp_rem, ())
+                    pb_switch.long_func(stp_rem, ())                   
+                    pb_one.release_func(stp_rem, ())
+                    pb_two.release_func(stp_rem, ())
+                    pb_three.release_func(stp_rem, ())
+                    pb_one.long_func(stp_rem, ())
+                    pb_two.long_func(stp_rem, ())
+                    pb_three.long_func(stp_rem, ())
+                    displayO.show_reminder_frame()
+                    displayO.oled.invert(x)
+                    x=not x
+                    utime.sleep_ms(500)        
+
                 
                 elif displayO.sleep_state and not menuO.menu_state and not displayO.lock_state and calibrationO.speed_calibrated:
                     pb_up.press_func(awake, ())
@@ -928,6 +1024,9 @@ def task_display_navigation():
                     pb_one.long_func(awake, ())
                     pb_two.long_func(awake, ())
                     pb_three.long_func(awake, ())
+                    if time() - start_tm_rem >= calibrationO.reminder_time:
+                        displayO.alarm()
+                
                         
                 
                 else:
