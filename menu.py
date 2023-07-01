@@ -35,6 +35,7 @@ class Menu:
         self.displayO.show_header("Home",wifi,ap)
         self.displayO.show_frame()
         self.displayO.show_height_frame(str(real_height(counter)))
+
         
     def move_menu_encoder(self,step_pin,direction_pin,menu_list,header,wifi,ap):
         list_length = len(menu_list)

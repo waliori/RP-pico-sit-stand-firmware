@@ -175,7 +175,7 @@ def c_wifi(wifi):
 
 
 def go_home():
-    sLock.acquire()
+    sLock.acquire()    
     calibrationO.idle_state = True
     menuO.s_w_state = False
     menuO.wc_state = False
@@ -190,6 +190,7 @@ def go_home():
     menuO.rem_state = False
     menuO.go_home(wifiO.wifi,wifiO.aps,calibrationO.real_height,motorO.counter)
     sLock.release()
+
     
 def go_back():
     global current_m, menu_list
@@ -520,16 +521,17 @@ def awake():
     displayO.wake()
     start_tm = time()
     if time() - start_tm >= calibrationO.sleep_time:
-        menuO.go_home(wifiO.wifi,wifiO.aps,calibrationO.real_height,motorO.counter)
+        go_home()
     sLock.release()                                                                                                                                              
 
 def stp_rem():
     sLock.acquire()
     global start_tm_rem
     displayO.stp_alarm()
+    displayO.start_time = utime.ticks_ms()
     start_tm_rem = time()
     if time() - start_tm_rem >= calibrationO.reminder_time:
-        menuO.go_home(wifiO.wifi,wifiO.aps,calibrationO.real_height,motorO.counter)
+        go_home()
     sLock.release()
     
 def handle_button(fc,args):
@@ -568,6 +570,7 @@ def set_rem_value(rem_value):
     if rem_value == 0 or rem_value == 86400:
         rem_value = sys.maxsize
     calibrationO.reminder_time = rem_value
+    displayO.reminder_time = rem_value
     sLock.acquire()
     file=open("settings.json","r")
     settings_json = json.loads(file.read())
@@ -601,7 +604,7 @@ def task_display_navigation():
     sleep_value = calibrationO.sleep_time
     sleep_previousValue = calibrationO.sleep_time+1
     rem_value = calibrationO.reminder_time
-    rem_previousValue = calibrationO.reminder_time+1
+    rem_previousValue = calibrationO.reminder_time+1    
     x=True
     while True:
         sLock.acquire()
@@ -978,6 +981,9 @@ def task_display_navigation():
                     
                 #addig to that, we display current real height and handle buttons
                 if (not displayO.sleep_state and not displayO.rem_state) and not menuO.menu_state and not displayO.lock_state and calibrationO.speed_calibrated:
+                    elapsed_time = (utime.ticks_ms() - displayO.start_time) / 1000.0  # Convert to seconds
+                    remaining_ratio = min(1, elapsed_time / displayO.reminder_time)  # Calculate the remaining time ratio
+                    displayO.progress_fill = int(remaining_ratio * 97)  # Calculate fill amount, scale it according to the length of the progress bar
                     displayO.show_header("Home",wifiO.wifi,wifiO.aps)
                     displayO.show_height_frame(str(calibrationO.real_height(motorO.counter)),motorO.rpm)
                     pb_up.press_func(handle_button, (move_motor, (up_button,)))

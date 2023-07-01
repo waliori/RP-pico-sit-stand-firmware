@@ -10,6 +10,10 @@ import math
 #display
 sit = bytearray(b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0f\x00\x00\x00\x00\x1f\x00\x00\x00\x00\x1f\x80\x00\x00\x00\x1f\x80\x02\x00\x00\x1f\x80\x03\x80\x00\x0f\x00\x03\x70\x00\x30\x00\x00\x0c\x00\x78\x00\x00\x02\x00\xbc\x00\x00\x02\x20\xfc\x00\x00\x00\x31\xfe\x38\x00\x04\x31\xfd\xfc\x00\x04\x39\xff\xf8\x00\x08\x39\xf7\xfc\x00\x08\x19\xf1\xf3\x80\x08\x1d\xf0\x3f\xff\xf8\x1d\xff\xcf\xff\xe0\x09\xff\xc0\x38\x00\x08\xff\xc0\x30\x00\x00\x01\xc0\x30\x00\x07\xfd\xc0\x38\x00\x01\xe1\xc0\x38\x00\x00\x41\xe0\x38\x00\x00\x41\xe0\x38\x00\x00\x41\xe0\x38\x00\x01\xf1\xe0\x38\x00\x04\x45\xe0\x38\x00\x04\x44\xe7\xff\xc0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
 stand = bytearray(b"\x00\x00\x00\x00\x00\x01\xe0\x00\x00\x00\x03\xf0\x00\x00\x00\x03\xf8\x00\x80\x00\x03\xf8\x00\x80\x00\x03\xf0\x00\x80\x00\x01\xf0\x00\xc0\x00\x00\xc0\x00\xf8\x00\x07\x00\x00\xc6\x00\x0d\x80\x00\x80\x80\x0f\x80\x00\x80\x40\x1f\x00\x00\x80\x40\x1f\x80\x00\x80\x40\x1f\x80\x00\x00\x80\x1f\x80\x00\x00\x80\x1f\xff\x00\x01\x00\x1e\xff\x00\x01\x00\x1f\xff\x00\x01\x00\x1f\x00\x00\x00\x00\x1f\x07\xff\xfe\x00\x0f\x10\xff\xf0\x00\x07\x00\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x07\x80\x06\x00\x00\x03\x83\xff\xf8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+alarm = bytearray(b"\x00\x00\x0c\x00\x1e\x00\x3e\x00\x3f\x00\x3f\x00\x3f\x00\x3f\x00\x0c\x00\x00\x00")
+sit_fb = framebuf.FrameBuffer(sit, 40, 38, framebuf.MONO_HLSB)
+stand_fb = framebuf.FrameBuffer(stand, 40, 38, framebuf.MONO_HLSB)
+alarm_fb = framebuf.FrameBuffer(alarm, 10, 10, framebuf.MONO_HLSB)
 
 def get_center_x(text, area_width,avg_char_width):
     text_width = len(text)*avg_char_width
@@ -71,7 +75,9 @@ class Display:
         self.lock_state = False
         self.sleep_state = False        
         self.rem_state = False
-
+        self.reminder_time = 0
+        self.start_time = 0
+        self.progress_fill = 0
     
         
     def init(self):        
@@ -186,7 +192,7 @@ class Display:
         self.oled.show()
         
     def show_height_frame(self,height,rpm=0):
-        height
+        print(self.progress_fill)
         self.clear_frame()
         h,w = get_avg_char_width_height(height,firacodeBold30)
         x=get_center_x(height,self.width,w)
@@ -195,6 +201,10 @@ class Display:
         self.font_writer_30.printstring(height)
         if rpm != 0:
             self.oled.text('RPM: '+str(int(rpm)),60,55)
+        if self.reminder_time <= 86400:
+            self.oled.blit(alarm_fb, 5, 17)
+            self.draw_frame(18,18,100,7)
+            self.oled.fill_rect(20,20,self.progress_fill,4,1)
         self.oled.show()
     
     def show_reminder_frame(self):
@@ -212,9 +222,7 @@ class Display:
         h,w = get_avg_char_width_height(header)
         x=get_center_x(header,self.width,w)
         y=get_center_y(self.title_height,h)
-        self.oled.text(header, x, y,0)
-        sit_fb = framebuf.FrameBuffer(sit, 40, 38, framebuf.MONO_HLSB)
-        stand_fb = framebuf.FrameBuffer(stand, 40, 38, framebuf.MONO_HLSB)
+        self.oled.text(header, x, y,0)        
         y=get_center_y(self.height-1+ self.title_height+3,38)
         self.oled.blit(sit_fb, 5, y)
         self.oled.blit(stand_fb, 83, y)
@@ -236,8 +244,8 @@ class Display:
     def draw_frame(self, x,y, width, height):
         self.oled.hline(x, y, width, 1)
         self.oled.vline(x, y, height, 1)
-        self.oled.hline(x, height, width, 1)
-        self.oled.vline(width, y, height+1, 1)
+        self.oled.hline(x, y+height, width, 1)
+        self.oled.vline(x+width, y, height, 1)
 
     def show_header(self,header,wifi,ap):             
         fb = framebuf.FrameBuffer(wifi, 14, 14, framebuf.MONO_HLSB)
@@ -260,12 +268,12 @@ class Display:
         self.oled.show()
         
     def show_frame(self):
-        self.draw_frame(0,self.title_height+3,self.width-1,self.height-1)
+        self.draw_frame(0,self.title_height+3,self.width-1,self.height-self.title_height-4)
         self.oled.show()
         
     def clear_frame(self):
         self.oled.fill_rect(2,self.title_height+4,self.width-3,self.width-3,0)
-        self.draw_frame(0,self.title_height+3,self.width-1,self.height-1)
+        self.draw_frame(0,self.title_height+3,self.width-1,self.height-self.title_height-4)
 #         self.oled.show()
 
     def text_frame(self, message):
@@ -288,5 +296,6 @@ class Display:
     
     def stp_alarm(self):
         self.rem_state = False
-        self.oled.invert(False)
-    
+        self.progress_fill = 0
+        self.oled.invert(False)        
+        

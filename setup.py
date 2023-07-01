@@ -67,6 +67,8 @@ wifiO = wifi.Wifi(app,sLock,displayO,menuO)
 print("initi wifiO")
 calibrationO = calibration.Calibration(displayO,motorO,sLock,wifiO.wifi,wifiO.aps)
 print("initi calibrationO")
+displayO.reminder_time = calibrationO.reminder_time
+displayO.start_time = utime.ticks_ms()
 presetsO = presets.Presets(motorO,calibrationO,sLock)
 print("initi presetsO")
 

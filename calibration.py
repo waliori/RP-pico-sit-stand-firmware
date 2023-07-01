@@ -31,6 +31,7 @@ class Calibration:
         try:    
             settings = open("settings.json","r")
             settings_json = json.loads(settings.read())
+            settings.close()
             self.max_encoder = settings_json["max_encoder"]
             self.min_encoder = settings_json["min_encoder"]
             self.max_real = settings_json["max_real"]
@@ -59,6 +60,7 @@ class Calibration:
             self.sleep_time = 30
             self.reminder_time = 5400 #90min
             file.write(json.dumps({"sleep_time":30,"reminder_time":5400}))
+            file.close()
             self.sLock.release()
             self.displayO.oled.fill(0)
             self.displayO.show_header("Calibration",self.wifi,self.aps)
@@ -71,6 +73,9 @@ class Calibration:
         if isinstance(value,float):
             return round(value,1)        
         return value
+    
+    def get_reminder(self):
+        return self.reminder_time
     
     def encoder_height(self,real):
         value = (real - self.min_real) * (self.max_encoder - self.min_encoder) / (self.max_real - self.min_real) + self.min_encoder
