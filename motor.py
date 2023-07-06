@@ -3,9 +3,9 @@ import json
 import uasyncio as asyncio
 
 class Motor:
-    def __init__(self, relay1, relay2, counter,sLock):
-        self.relay1 = relay1
-        self.relay2 = relay2
+    def __init__(self, pwm1, pwm2, counter,sLock):
+        self.pwm1 = pwm1
+        self.pwm2 = pwm2
         self.counter = counter   # counter updates when encoder rotates
         self.outA_last = 0 # registers the last state of outA pin / CLK pin
         self.outA_current = 0 # registers the current state of outA pin / CLK pin
@@ -41,15 +41,33 @@ class Motor:
             self.sens_list_tresh = 5
             self.sens_tresh = 5
         
-    def move_motor_forward(self):
-        self.relay1.high()
-        self.relay2.low()
-    def move_motor_backward(self):
-        self.relay1.low()
-        self.relay2.high()
+    def move_motor_forward(self,outA,outB):
+        for duty in range(0,65025,10):
+            self.pwm1.duty_u16(duty)
+            self.f_en(outA,outB)
+            utime.sleep_us(1)
+    
+    def slow_motor_forward(self,outA,outB):
+        for duty in range(65025, 0, -10):
+            self.pwm1.duty_u16(duty)
+            self.f_en(outA,outB)
+            utime.sleep_us(1)
+            
+    def move_motor_backward(self,outA,outB):
+        for duty in range(0,65025,10):
+            self.pwm2.duty_u16(duty)
+            self.b_en(outA,outB)
+            utime.sleep_us(1)
+        
+    def slow_motor_backward(self,outA,outB):
+        for duty in range(65025, 0, -10):
+            self.pwm2.duty_u16(duty)
+            self.b_en(outA,outB)
+            utime.sleep_us(1)
+        
     def stop_motor(self):
-        self.relay1.low()
-        self.relay2.low()
+        self.pwm1.duty_u16(0)
+        self.pwm2.duty_u16(0)
         self.rpm = 0
         
     def save_position(self):
@@ -59,7 +77,18 @@ class Motor:
         file.write(json.dumps({"current_encoder":self.counter}))
         self.sLock.release()
         
-    
+    def f_en(self,outA,outB):
+        self.outA_current = outA.value()
+        if self.outA_current != self.outA_last:
+            self.counter += 1
+        self.outA_last = self.outA_current
+        
+    def b_en(self,outA,outB):
+        self.outA_current = outA.value()
+        if self.outA_current != self.outA_last:
+            self.counter -= 1
+        self.outA_last = self.outA_current
+        
     def encoder(self,outA,outB,collision=False):
         self.outA_current = outA.value()
         direction = None
@@ -71,37 +100,37 @@ class Motor:
                 self.counter -= 1
                 direction = 'down'
         self.outA_last = self.outA_current
-        self.ietrations += 1
-        if self.current_counter != self.counter:
-            self.current_counter = self.counter            
-            self.last_pulse += 1
-            timediff = round((utime.ticks_us() - self.srt)/1_000,2)
-            if timediff >= 100:
-                rps = round((self.last_pulse/timediff)*self.statesrota,1)
-                self.rpm = round(rps*60,1)               
-                self.last_pulse=0
-                self.ietrations= 0
-                self.srt = utime.ticks_us()
-                if self.rpm+self.sens_tresh < self.max_speed or self.rpm+self.sens_tresh < self.min_speed:                    
-                    if self.block_err_cnt >= self.sens_list_tresh:
-                        self.stop_motor()
-                        self.blocked = True
-                    self.block_err_cnt += 1
-                if collision:                    
-                    if direction == 'up':
-                        if self.max_speeds == 0:
-                            self.max_speeds = self.rpm
-                        else:
-                            self.max_speeds = (self.max_speeds+ self.rpm)/2
-                    else:
-                        if self.min_speeds == 0:
-                            self.min_speeds = self.rpm
-                        else:
-                            self.min_speeds = (self.min_speeds+ self.rpm)/2
+#         self.ietrations += 1
+#         if self.current_counter != self.counter:
+#             self.current_counter = self.counter            
+#             self.last_pulse += 1
+#             timediff = round((utime.ticks_us() - self.srt)/1_000,2)
+#             if timediff >= 100:
+#                 rps = round((self.last_pulse/timediff)*self.statesrota,1)
+#                 self.rpm = round(rps*60,1)               
+#                 self.last_pulse=0
+#                 self.ietrations= 0
+#                 self.srt = utime.ticks_us()
+#                 if self.rpm+self.sens_tresh < self.max_speed or self.rpm+self.sens_tresh < self.min_speed:                    
+#                     if self.block_err_cnt >= self.sens_list_tresh:
+#                         self.stop_motor()
+#                         self.blocked = True
+#                     self.block_err_cnt += 1
+#                 if collision:                    
+#                     if direction == 'up':
+#                         if self.max_speeds == 0:
+#                             self.max_speeds = self.rpm
+#                         else:
+#                             self.max_speeds = (self.max_speeds+ self.rpm)/2
+#                     else:
+#                         if self.min_speeds == 0:
+#                             self.min_speeds = self.rpm
+#                         else:
+#                             self.min_speeds = (self.min_speeds+ self.rpm)/2
         utime.sleep_us(1)
         
     def move_motor(self, button, up_button,outA, outB, mini ,maxi, collision=False):
-#         print("move_motor", mf())
+        print("move_motor")
         debounce_time = 50  # Debounce time in milliseconds
         debounce_start = 0  # Timestamp of debounce start
         debounce_duration = debounce_time * 1000  # Debounce duration in microseconds
@@ -113,49 +142,72 @@ class Motor:
         self.block_err_cnt = 0
         self.max_speeds = 0
         self.min_speeds = 0
-        while True:
+        duty_f = 0
+        while True:            
             if button.value() == 0:
                 if debounce_start == 0:
                     debounce_start = utime.ticks_us()
                 elif utime.ticks_diff(utime.ticks_us(), debounce_start) > debounce_duration:
                     if(button == up_button):
                         if self.direction == 0 and not self.counter >= maxi:
-                            if self.counter >= (maxi -15):
-                                self.stop_motor()
-                            self.move_motor_forward()
+                            if self.counter >= (maxi -30):
+                                self.stop_motor()                            
+                            self.move_motor_forward(outA,outB)
                             self.direction = 1                                
                     else:
                         if self.direction == 0 and not self.counter <= mini:
-                            if self.counter <= (mini + 15):
+                            if self.counter <= (mini + 30):
                                 self.stop_motor()
-                            self.move_motor_backward()
+                            self.move_motor_backward(outA,outB)
                             self.direction = -1
                     debounce_start = 0
-            else:
-                if debounce_start > 0:
-                    # Button has been released                    
-                    if self.blocked:
-                        self.blocked = False
-                        if button == up_button:
-                            self.move_motor_backward()
-                            utime.sleep(3)
-                        else:
-                            self.move_motor_forward()
-                            utime.sleep(3)
+            if button.value() != 0:
+                if self.counter >= (mini + 15) and self.counter <= (maxi -15):
+                    if button == up_button:
+    #                     if self.direction == 0 and not self.counter >= maxi:
+    #                     if self.counter >= (maxi -15):
+                        self.slow_motor_forward(outA,outB)
+                    else:
+    #                     if self.direction == 0 and not self.counter <= mini:
+    #                     if self.counter <= (mini + 15):
+                        self.slow_motor_backward(outA,outB)
+                else:
                     self.stop_motor()
-                    self.direction = 0
-                    self.ietrations = 0
-                    self.save_position()
-                    debounce_start = 0
-                    if collision:
-                        if self.max_speeds:
-                            self.max_speed = self.max_speeds
-                        if self.min_speeds:
-                            self.min_speed = self.min_speeds
-                    break
+                self.direction = 0
+                self.ietrations = 0
+                self.save_position()
+                debounce_start = 0
+                if collision:
+                    if self.max_speeds:
+                        self.max_speed = self.max_speeds
+                    if self.min_speeds:
+                        self.min_speed = self.min_speeds
+                break
+#             else:
+#                 if debounce_start > 0:
+                    # Button has been released                    
+#                     if self.blocked:
+#                         self.blocked = False
+#                         if button == up_button:
+#                             self.move_motor_backward(outA,outB,collision)
+#                             utime.sleep(3)
+#                         else:
+#                             self.move_motor_forward(outA,outB,collision)
+#                             utime.sleep(3)
+#                     self.stop_motor()
+#                     self.direction = 0
+#                     self.ietrations = 0
+#                     self.save_position()
+#                     debounce_start = 0
+#                     if collision:
+#                         if self.max_speeds:
+#                             self.max_speed = self.max_speeds
+#                         if self.min_speeds:
+#                             self.min_speed = self.min_speeds
+#                     break
             self.encoder(outA,outB,collision)
-            utime.sleep_us(1)
-#         print("move_motor_end", mf())
+#             utime.sleep_us(1)
+        print("move_motor_end")
             
     def move_motor_height(self, direction,outA, outB, height):
         while True:
@@ -164,14 +216,14 @@ class Motor:
                     self.stop_motor()
                     self.save_position()
                     break
-                self.move_motor_forward()
+                self.move_motor_forward(outA,outB)
             else:
                 if self.counter <= height:
                     self.stop_motor()
                     self.save_position()
                     break
-                self.move_motor_backward()                   
-            self.encoder(outA,outB)
+                self.move_motor_backward(outA,outB)                   
+#             self.encoder(outA,outB)
             utime.sleep_ms(1)
             
             
@@ -193,15 +245,15 @@ class Motor:
                     self.stop_motor()
                     self.save_position()
                     break
-                self.move_motor_forward()
+                self.move_motor_forward(outA,outB)
             else:
                 if self.counter <= mini+10:
                     self.api = False
                     self.stop_motor()
                     self.save_position()
                     break
-                self.move_motor_backward()                   
-            await self.encoder_api(outA,outB)
+                self.move_motor_backward(outA,outB)                   
+#             await self.encoder_api(outA,outB)
             await asyncio.sleep_ms(1)
             
     async def stop_motor_api(self):

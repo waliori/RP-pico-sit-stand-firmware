@@ -1,5 +1,5 @@
 from microdot_asyncio import Microdot, Response
-from machine import Pin, Timer, I2C
+from machine import Pin, Timer, I2C, PWM
 import display, motor, wifi, calibration, menu, presets
 import utime
 import os, sys
@@ -27,10 +27,16 @@ except:
     current_encoder = 0
   
 #relay for motor
-relay1 = Pin(0, Pin.OUT)
-relay2 = Pin(1, Pin.OUT)
-  
-motorO = motor.Motor(relay1, relay2,current_encoder,sLock)
+r_pwm_pin = 0
+l_pwm_pin = 1
+pwm1 = PWM(Pin(r_pwm_pin, Pin.OUT)) #R_PWM
+pwm2 = PWM(Pin(l_pwm_pin, Pin.OUT)) #L_PWM
+duty = 0
+pwm1.freq(1000)
+pwm1.duty_u16(duty)
+pwm2.freq(1000)
+pwm2.duty_u16(duty)
+motorO = motor.Motor(pwm1, pwm2,current_encoder,sLock)
 motorO.stop_motor()
 
 app = Microdot()

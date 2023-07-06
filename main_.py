@@ -16,6 +16,18 @@ menu = ["Back to Wifi","Connect","Forget"]
 mm = ["Back to Conf","Min","Max"]
 chosen_wf = ""
 
+pb_up = Pushbutton(up_button, suppress=True)
+pb_down = Pushbutton(down_button, suppress=True)
+pb_switch = Pushbutton(button_pin, suppress = True)
+
+pb_one = Pushbutton(one_button, suppress=True)
+pb_two = Pushbutton(two_button, suppress=True)
+pb_three = Pushbutton(three_button, suppress=True)
+
+# timeo = 0
+start_tm = time()
+start_tm_rem = time()
+
 def move_motor(button,calibration=False):
     motorO.move_motor(button,up_button,outA,outB,calibrationO.min_encoder, calibrationO.max_encoder, calibration )          
             
@@ -503,17 +515,7 @@ def lock_unlock():
     displayO.oled.show()
     sLock.release()   
 
-pb_up = Pushbutton(up_button, suppress=True)
-pb_down = Pushbutton(down_button, suppress=True)
-pb_switch = Pushbutton(button_pin, suppress = True)
 
-pb_one = Pushbutton(one_button, suppress=True)
-pb_two = Pushbutton(two_button, suppress=True)
-pb_three = Pushbutton(three_button, suppress=True)
-
-# timeo = 0
-start_tm = time()
-start_tm_rem = time()
 
 def awake():
     sLock.acquire()
