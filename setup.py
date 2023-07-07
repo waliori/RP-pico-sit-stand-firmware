@@ -32,9 +32,9 @@ l_pwm_pin = 1
 pwm1 = PWM(Pin(r_pwm_pin, Pin.OUT)) #R_PWM
 pwm2 = PWM(Pin(l_pwm_pin, Pin.OUT)) #L_PWM
 duty = 0
-pwm1.freq(1000)
+pwm1.freq(16000)
 pwm1.duty_u16(duty)
-pwm2.freq(1000)
+pwm2.freq(16000)
 pwm2.duty_u16(duty)
 motorO = motor.Motor(pwm1, pwm2,current_encoder,sLock)
 motorO.stop_motor()

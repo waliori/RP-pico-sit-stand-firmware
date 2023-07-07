@@ -27,6 +27,8 @@ class Motor:
         self.statesrota = 20 #encoder
         self.blocked = False
         self.rpm = 0
+        self.current_direction = None
+        self.current_duty = 0
         
     #TODO test real world numbers of min and max speed and change values bellow
     #these numbers are for "min_speed": 37.96875, "max_speed": 37.65517,
@@ -42,28 +44,28 @@ class Motor:
             self.sens_tresh = 5
         
     def move_motor_forward(self,outA,outB):
-        for duty in range(0,65025,10):
+        for duty in range(0,65025,5):
             self.pwm1.duty_u16(duty)
             self.f_en(outA,outB)
-            utime.sleep_us(1)
+#             utime.sleep_us(1)
     
     def slow_motor_forward(self,outA,outB):
-        for duty in range(65025, 0, -10):
+        for duty in range(65025, 0, -5):
             self.pwm1.duty_u16(duty)
             self.f_en(outA,outB)
-            utime.sleep_us(1)
+#             utime.sleep_us(1)
             
     def move_motor_backward(self,outA,outB):
-        for duty in range(0,65025,10):
+        for duty in range(0,65025,5):
             self.pwm2.duty_u16(duty)
             self.b_en(outA,outB)
-            utime.sleep_us(1)
+#             utime.sleep_us(1)
         
     def slow_motor_backward(self,outA,outB):
-        for duty in range(65025, 0, -10):
+        for duty in range(65025, 0, -5):
             self.pwm2.duty_u16(duty)
             self.b_en(outA,outB)
-            utime.sleep_us(1)
+#             utime.sleep_us(1)
         
     def stop_motor(self):
         self.pwm1.duty_u16(0)
@@ -130,10 +132,9 @@ class Motor:
         utime.sleep_us(1)
         
     def move_motor(self, button, up_button,outA, outB, mini ,maxi, collision=False):
-        print("move_motor")
         debounce_time = 50  # Debounce time in milliseconds
         debounce_start = 0  # Timestamp of debounce start
-        debounce_duration = debounce_time * 1000  # Debounce duration in microseconds
+        debounce_duration = debounce_time * 1000  # Debounce duration in microseconds        
         self.last_pulse=0
         self.srt= utime.ticks_us()
         if not mini or not maxi:
@@ -142,7 +143,6 @@ class Motor:
         self.block_err_cnt = 0
         self.max_speeds = 0
         self.min_speeds = 0
-        duty_f = 0
         while True:            
             if button.value() == 0:
                 if debounce_start == 0:
@@ -150,26 +150,22 @@ class Motor:
                 elif utime.ticks_diff(utime.ticks_us(), debounce_start) > debounce_duration:
                     if(button == up_button):
                         if self.direction == 0 and not self.counter >= maxi:
-                            if self.counter >= (maxi -30):
+                            if self.counter >= (maxi - 15):
                                 self.stop_motor()                            
                             self.move_motor_forward(outA,outB)
                             self.direction = 1                                
                     else:
                         if self.direction == 0 and not self.counter <= mini:
-                            if self.counter <= (mini + 30):
+                            if self.counter <= (mini + 15):
                                 self.stop_motor()
                             self.move_motor_backward(outA,outB)
                             self.direction = -1
                     debounce_start = 0
             if button.value() != 0:
-                if self.counter >= (mini + 15) and self.counter <= (maxi -15):
+                if self.counter >= (mini + 30) and self.counter <= (maxi -30):
                     if button == up_button:
-    #                     if self.direction == 0 and not self.counter >= maxi:
-    #                     if self.counter >= (maxi -15):
                         self.slow_motor_forward(outA,outB)
                     else:
-    #                     if self.direction == 0 and not self.counter <= mini:
-    #                     if self.counter <= (mini + 15):
                         self.slow_motor_backward(outA,outB)
                 else:
                     self.stop_motor()
@@ -206,25 +202,37 @@ class Motor:
 #                             self.min_speed = self.min_speeds
 #                     break
             self.encoder(outA,outB,collision)
-#             utime.sleep_us(1)
-        print("move_motor_end")
             
     def move_motor_height(self, direction,outA, outB, height):
+        self.pwm1.duty_u16(0)  # Start with both motor channels stopped.
+        self.pwm2.duty_u16(0)
+        duty = 0
         while True:
-            if(direction == "up"):
-                if self.counter >= height:                    
-                    self.stop_motor()
+            if direction == "up":
+                if self.counter >= height:
+                    for duty in range(duty, -1, -5):
+                        self.pwm1.duty_u16(duty)
+                        utime.sleep_us(1)
                     self.save_position()
                     break
-                self.move_motor_forward(outA,outB)
+                elif duty < 65025:  # Ramp up to full speed.
+                    duty += 5
+                    self.pwm1.duty_u16(duty)
+                    self.f_en(outA,outB)
+                self.f_en(outA,outB)  # Update encoder readings
             else:
                 if self.counter <= height:
-                    self.stop_motor()
+                    for duty in range(duty, -1, -5):
+                        self.pwm2.duty_u16(duty)
+                        utime.sleep_us(1)
                     self.save_position()
                     break
-                self.move_motor_backward(outA,outB)                   
-#             self.encoder(outA,outB)
-            utime.sleep_ms(1)
+                elif duty < 65025:  # Ramp up to full speed.
+                    duty += 5
+                    self.pwm2.duty_u16(duty)
+                    self.b_en(outA,outB)
+                self.b_en(outA,outB)  # Update encoder readings
+            utime.sleep_us(1)
             
             
     async def encoder_api(self,outA,outB):
@@ -238,26 +246,50 @@ class Motor:
         await asyncio.sleep_ms(1)
         
     async def move_motor_api(self, direction,outA, outB, mini, maxi):
+        self.pwm1.duty_u16(0)  # Start with both motor channels stopped.
+        self.pwm2.duty_u16(0)      
+        duty = 0
         while self.api:
             if(direction == "up"):
                 if self.counter >= maxi-10:
                     self.api = False
-                    self.stop_motor()
+                    # Gradual stop
+                    for duty in range(duty, -1, -50):
+                        self.pwm1.duty_u16(duty)
+                        await asyncio.sleep_ms(1)
                     self.save_position()
                     break
-                self.move_motor_forward(outA,outB)
+                elif duty < 65025:  # Ramp up to full speed.
+                    duty += 50  # Increase step size for faster ramp-up.
+                    self.pwm1.duty_u16(duty)  # Assuming PWM1 controls 'up' direction.
+                self.f_en(outA,outB)  # Update the encoder counter
             else:
                 if self.counter <= mini+10:
                     self.api = False
-                    self.stop_motor()
+                    for duty in range(duty, -1, -50):
+                        self.pwm2.duty_u16(duty)
+                        await asyncio.sleep_ms(1)
                     self.save_position()
                     break
-                self.move_motor_backward(outA,outB)                   
-#             await self.encoder_api(outA,outB)
+                elif duty < 65025:  # Ramp up to full speed.
+                    duty += 50  # Increase step size for faster ramp-up.
+                    self.pwm2.duty_u16(duty)  # Assuming PWM2 controls 'down' direction.
+                self.b_en(outA,outB)  # Update the encoder counter
+            self.current_direction = direction  
+            self.current_duty = duty
             await asyncio.sleep_ms(1)
             
-    async def stop_motor_api(self):
+    async def stop_motor_api(self,outA, outB):
         self.api = False
-        self.relay1.low()
-        self.relay2.low()
+        # Gradual stop
+        if self.current_direction == "up":
+            for duty in range(self.current_duty, -1, -50):
+                self.pwm1.duty_u16(duty)
+                self.f_en(outA,outB)  # Update the encoder counter while slowing down
+                await asyncio.sleep_ms(1)
+        else: 
+            for duty in range(self.current_duty, -1, -50):
+                self.pwm2.duty_u16(duty)
+                self.b_en(outA,outB)  # Update the encoder counter while slowing down
+                await asyncio.sleep_ms(1)
         self.save_position()

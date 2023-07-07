@@ -41,9 +41,9 @@ class Calibration:
             self.sleep_time = settings_json["sleep_time"]
             self.reminder_time = settings_json["reminder_time"]
             if settings_json["sleep_time"] > 86400:
-                self.sleep_time = 86400
+                self.sleep_time = 86401
             if settings_json["reminder_time"] > 86400:
-                self.reminder_time = 86400
+                self.reminder_time = 86401
             self.idle_state = True
             self.semi_calibrated = True
             self.real_semi_calibrated = True        

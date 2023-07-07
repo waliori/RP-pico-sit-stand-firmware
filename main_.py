@@ -1093,7 +1093,8 @@ def toggle_server(loop,operation):
         
         async def a_stop():            
             motorO.api = False
-            await asyncio.create_task(motorO.stop_motor_api())
+            await asyncio.create_task(motorO.stop_motor_api(outA,outB))
+            
         async def a_lock():#refresh display header? requires get current header
             displayO.lock_state = True
         async def a_unlock():
@@ -1207,15 +1208,18 @@ def toggle_server(loop,operation):
             return res
                      
         
-        @wifiO.app.route('/stop')
+        @wifiO.app.route('/stop',methods=['GET', 'OPTIONS'])
         async def stop(request):
-            current_task = await asyncio.create_task(a_stop())
             res= None
             res = Response(res)
             res.status_code = 200
             res.headers["Access-Control-Allow-Origin"] = '*'
             res.headers["Access-Control-Allow-Methods"] = '*'
-            res.body = json.dumps({"status":  "ok"})              
+            if not displayO.lock_state:
+                current_task = await asyncio.create_task(a_stop())
+                res.body = json.dumps({"status": "ok"})              
+                return res
+            res.body = json.dumps({"status": "nok"})              
             return res
         
         @wifiO.app.route('/lock')
