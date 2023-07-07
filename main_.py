@@ -16,6 +16,18 @@ menu = ["Back to Wifi","Connect","Forget"]
 mm = ["Back to Conf","Min","Max"]
 chosen_wf = ""
 
+pb_up = Pushbutton(up_button, suppress=True)
+pb_down = Pushbutton(down_button, suppress=True)
+pb_switch = Pushbutton(button_pin, suppress = True)
+
+pb_one = Pushbutton(one_button, suppress=True)
+pb_two = Pushbutton(two_button, suppress=True)
+pb_three = Pushbutton(three_button, suppress=True)
+
+# timeo = 0
+start_tm = time()
+start_tm_rem = time()
+
 def move_motor(button,calibration=False):
     motorO.move_motor(button,up_button,outA,outB,calibrationO.min_encoder, calibrationO.max_encoder, calibration )          
             
@@ -503,17 +515,7 @@ def lock_unlock():
     displayO.oled.show()
     sLock.release()   
 
-pb_up = Pushbutton(up_button, suppress=True)
-pb_down = Pushbutton(down_button, suppress=True)
-pb_switch = Pushbutton(button_pin, suppress = True)
 
-pb_one = Pushbutton(one_button, suppress=True)
-pb_two = Pushbutton(two_button, suppress=True)
-pb_three = Pushbutton(three_button, suppress=True)
-
-# timeo = 0
-start_tm = time()
-start_tm_rem = time()
 
 def awake():
     sLock.acquire()
@@ -1091,7 +1093,8 @@ def toggle_server(loop,operation):
         
         async def a_stop():            
             motorO.api = False
-            await asyncio.create_task(motorO.stop_motor_api())
+            await asyncio.create_task(motorO.stop_motor_api(outA,outB))
+            
         async def a_lock():#refresh display header? requires get current header
             displayO.lock_state = True
         async def a_unlock():
@@ -1205,15 +1208,18 @@ def toggle_server(loop,operation):
             return res
                      
         
-        @wifiO.app.route('/stop')
+        @wifiO.app.route('/stop',methods=['GET', 'OPTIONS'])
         async def stop(request):
-            current_task = await asyncio.create_task(a_stop())
             res= None
             res = Response(res)
             res.status_code = 200
             res.headers["Access-Control-Allow-Origin"] = '*'
             res.headers["Access-Control-Allow-Methods"] = '*'
-            res.body = json.dumps({"status":  "ok"})              
+            if not displayO.lock_state:
+                current_task = await asyncio.create_task(a_stop())
+                res.body = json.dumps({"status": "ok"})              
+                return res
+            res.body = json.dumps({"status": "nok"})              
             return res
         
         @wifiO.app.route('/lock')
