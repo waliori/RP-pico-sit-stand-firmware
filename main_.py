@@ -375,6 +375,14 @@ def go_to_preset(preset):
 
 def set_preset(preset):
     presetsO.set_preset(preset)
+    sLock.acquire()
+    displayO.clear_frame()
+    preset_list = [f"Preset {preset} set to", "",f"{str(calibrationO.real_height(motorO.counter))}"]
+    displayO.show_static_frame(preset_list,len(preset_list))  
+    displayO.oled.show()      
+    utime.sleep(2)
+    sLock.release()
+                
 
 
         

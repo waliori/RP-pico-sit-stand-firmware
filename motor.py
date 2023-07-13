@@ -43,26 +43,38 @@ class Motor:
             self.sens_list_tresh = 5
             self.sens_tresh = 5
         
-    def move_motor_forward(self,outA,outB):
+    def move_motor_forward(self,outA,outB,maxi):
         for duty in range(0,65025,5):
+            if self.counter >= (maxi):
+                self.stop_motor()
+                break
             self.pwm1.duty_u16(duty)
             self.f_en(outA,outB)
 #             utime.sleep_us(1)
     
-    def slow_motor_forward(self,outA,outB):
+    def slow_motor_forward(self,outA,outB,maxi):
         for duty in range(65025, 0, -5):
+            if self.counter >= (maxi - 15):
+                self.stop_motor()
+                break
             self.pwm1.duty_u16(duty)
             self.f_en(outA,outB)
 #             utime.sleep_us(1)
             
-    def move_motor_backward(self,outA,outB):
+    def move_motor_backward(self,outA,outB,mini):
         for duty in range(0,65025,5):
+            if self.counter <= (mini):
+                self.stop_motor()
+                break
             self.pwm2.duty_u16(duty)
             self.b_en(outA,outB)
 #             utime.sleep_us(1)
         
-    def slow_motor_backward(self,outA,outB):
+    def slow_motor_backward(self,outA,outB,mini):
         for duty in range(65025, 0, -5):
+            if self.counter <= (mini):
+                self.stop_motor()
+                break
             self.pwm2.duty_u16(duty)
             self.b_en(outA,outB)
 #             utime.sleep_us(1)
@@ -152,21 +164,21 @@ class Motor:
                         if self.direction == 0 and not self.counter >= maxi:
                             if self.counter >= (maxi - 15):
                                 self.stop_motor()                            
-                            self.move_motor_forward(outA,outB)
+                            self.move_motor_forward(outA,outB,maxi - 15)
                             self.direction = 1                                
                     else:
                         if self.direction == 0 and not self.counter <= mini:
                             if self.counter <= (mini + 15):
                                 self.stop_motor()
-                            self.move_motor_backward(outA,outB)
+                            self.move_motor_backward(outA,outB,mini + 15)
                             self.direction = -1
                     debounce_start = 0
             if button.value() != 0:
                 if self.counter >= (mini + 30) and self.counter <= (maxi -30):
                     if button == up_button:
-                        self.slow_motor_forward(outA,outB)
+                        self.slow_motor_forward(outA,outB,maxi -30)
                     else:
-                        self.slow_motor_backward(outA,outB)
+                        self.slow_motor_backward(outA,outB,mini + 30)
                 else:
                     self.stop_motor()
                 self.direction = 0
@@ -179,28 +191,6 @@ class Motor:
                     if self.min_speeds:
                         self.min_speed = self.min_speeds
                 break
-#             else:
-#                 if debounce_start > 0:
-                    # Button has been released                    
-#                     if self.blocked:
-#                         self.blocked = False
-#                         if button == up_button:
-#                             self.move_motor_backward(outA,outB,collision)
-#                             utime.sleep(3)
-#                         else:
-#                             self.move_motor_forward(outA,outB,collision)
-#                             utime.sleep(3)
-#                     self.stop_motor()
-#                     self.direction = 0
-#                     self.ietrations = 0
-#                     self.save_position()
-#                     debounce_start = 0
-#                     if collision:
-#                         if self.max_speeds:
-#                             self.max_speed = self.max_speeds
-#                         if self.min_speeds:
-#                             self.min_speed = self.min_speeds
-#                     break
             self.encoder(outA,outB,collision)
             
     def move_motor_height(self, direction,outA, outB, height):
