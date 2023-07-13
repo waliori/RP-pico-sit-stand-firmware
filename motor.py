@@ -59,6 +59,7 @@ class Motor:
                 break
             self.pwm1.duty_u16(duty)
             self.f_en(outA,outB)
+        self.rpm = 0
 #             utime.sleep_us(1)
             
     def move_motor_backward(self,outA,outB,mini):
@@ -77,6 +78,7 @@ class Motor:
                 break
             self.pwm2.duty_u16(duty)
             self.b_en(outA,outB)
+        self.rpm = 0
 #             utime.sleep_us(1)
         
     def stop_motor(self):
@@ -90,18 +92,30 @@ class Motor:
         file=open("state.json","w")
         file.write(json.dumps({"current_encoder":self.counter}))
         self.sLock.release()
-        
+    def rpm_updt(self):
+        if self.current_counter != self.counter:
+            self.current_counter = self.counter            
+            self.last_pulse += 1
+            timediff = round((utime.ticks_us() - self.srt)/1_000,2)
+            if timediff >= 100:
+                rps = round((self.last_pulse/timediff)*self.statesrota,1)
+                self.rpm = round(rps*60,1)               
+                self.last_pulse=0
+                self.ietrations= 0
+                self.srt = utime.ticks_us()
     def f_en(self,outA,outB):
         self.outA_current = outA.value()
         if self.outA_current != self.outA_last:
             self.counter += 1
         self.outA_last = self.outA_current
+        self.rpm_updt()
         
     def b_en(self,outA,outB):
         self.outA_current = outA.value()
         if self.outA_current != self.outA_last:
             self.counter -= 1
         self.outA_last = self.outA_current
+        self.rpm_updt()
         
     def encoder(self,outA,outB,collision=False):
         self.outA_current = outA.value()
@@ -114,17 +128,7 @@ class Motor:
                 self.counter -= 1
                 direction = 'down'
         self.outA_last = self.outA_current
-#         self.ietrations += 1
-#         if self.current_counter != self.counter:
-#             self.current_counter = self.counter            
-#             self.last_pulse += 1
-#             timediff = round((utime.ticks_us() - self.srt)/1_000,2)
-#             if timediff >= 100:
-#                 rps = round((self.last_pulse/timediff)*self.statesrota,1)
-#                 self.rpm = round(rps*60,1)               
-#                 self.last_pulse=0
-#                 self.ietrations= 0
-#                 self.srt = utime.ticks_us()
+        self.rpm_updt()
 #                 if self.rpm+self.sens_tresh < self.max_speed or self.rpm+self.sens_tresh < self.min_speed:                    
 #                     if self.block_err_cnt >= self.sens_list_tresh:
 #                         self.stop_motor()
@@ -204,9 +208,10 @@ class Motor:
                         self.pwm1.duty_u16(duty)
                         utime.sleep_us(1)
                     self.save_position()
+                    self.rpm=0
                     break
                 elif duty < 65025:  # Ramp up to full speed.
-                    duty += 5
+                    duty += 10
                     self.pwm1.duty_u16(duty)
                     self.f_en(outA,outB)
                 self.f_en(outA,outB)  # Update encoder readings
@@ -216,9 +221,10 @@ class Motor:
                         self.pwm2.duty_u16(duty)
                         utime.sleep_us(1)
                     self.save_position()
+                    self.rpm=0
                     break
                 elif duty < 65025:  # Ramp up to full speed.
-                    duty += 5
+                    duty += 10
                     self.pwm2.duty_u16(duty)
                     self.b_en(outA,outB)
                 self.b_en(outA,outB)  # Update encoder readings
