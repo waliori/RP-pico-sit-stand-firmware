@@ -152,7 +152,6 @@ class Display:
         self.oled.fill_rect(0,(line*line_height),self.width,self.height,0)
 
         # Shift the list of files so that it shows on the display
-        list_length = len(presets)
         short_list = presets[shift:shift+total_lines]
         for item in short_list:
             self.oled.text(item, 2, (line*line_height)+10,1)
