@@ -7,7 +7,7 @@ import machine
 # import math
 
 # Motor Section
-
+#TODO modifier go height to calculate current height + wanted height < max
         
 current_m = ".."
 menu_list = ["..", "WiFi","Configuration", "Lock Unlock", "Show Presets", "Show min/max", "Collision Reset", "Factory Reset"]
