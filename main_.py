@@ -8,7 +8,7 @@ import machine
 
 # Motor Section
 #TODO modifier go height to calculate current height + wanted height < max
-        
+#TODO add acceleration + position to know if impact        
 current_m = ".."
 menu_list = ["..", "WiFi","Configuration", "Lock Unlock", "Show Presets", "Show min/max", "Collision Reset", "Factory Reset"]
 conf_menu = ["Go back","Sleep after","Set min/max", "Stand reminder"]
