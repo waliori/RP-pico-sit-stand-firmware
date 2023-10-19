@@ -60,7 +60,7 @@ class Display:
         self.scl = scl
         self.sda = sda
         self.freq = freq
-        i2c = I2C(1, scl=Pin(scl), sda=Pin(sda), freq=freq)
+        i2c = I2C(self.i2c_id, scl=Pin(scl), sda=Pin(sda), freq=freq)
         self.oled = SH1106_I2C(width, height, i2c)
         self.oled.invert(False)
         self.font_writer_20 = writer.Writer(self.oled, freesans20)

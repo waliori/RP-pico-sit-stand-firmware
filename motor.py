@@ -204,7 +204,7 @@ class Motor:
         while True:
             if direction == "up":
                 if self.counter >= height:
-                    for duty in range(duty, -1, -5):
+                    for duty in range(duty, -1, -3):
                         self.pwm1.duty_u16(duty)
                         utime.sleep_us(1)
                     self.save_position()
@@ -217,7 +217,7 @@ class Motor:
                 self.f_en(outA,outB)  # Update encoder readings
             else:
                 if self.counter <= height:
-                    for duty in range(duty, -1, -5):
+                    for duty in range(duty, -1, -3):
                         self.pwm2.duty_u16(duty)
                         utime.sleep_us(1)
                     self.save_position()

@@ -11,7 +11,7 @@ import machine
 #TODO add acceleration + position to know if impact        
 current_m = ".."
 menu_list = ["..", "WiFi","Configuration", "Lock Unlock", "Show Presets", "Show min/max", "Collision Reset", "Factory Reset"]
-conf_menu = ["Go back","Sleep after","Set min/max", "Stand reminder"]
+conf_menu = ["Go back","Sleep after","Set min/max", "Stand reminder","Vibration", "Sound"]
 menu = ["Back to Wifi","Connect","Forget"]
 mm = ["Back to Conf","Min","Max"]
 chosen_wf = ""
@@ -212,7 +212,7 @@ def go_back():
         wifi_menu()
     elif current_m in ["WiFi","Lock Unlock", "Show Presets", "Show min/max", "Collision Reset", "Factory Reset","Configuration","Go back"]:
         show_menu(menu_list)
-    elif current_m in ["Sleep after","Back to Conf"]:
+    elif current_m in ["Sleep after","Back to Conf", "Vibration"]:
         current_m = "Configuration"
         config_menu()
     elif current_m == "..":
@@ -286,7 +286,22 @@ def max_m():
     displayO.oled.show()
     sLock.release()
 
-
+def toggle_vibration():
+    sLock.acquire()
+    print("vibration")
+    print(buzzvibO.vibration)
+    buzzvibO.vibrat.value(1)
+    utime.sleep(1)
+    buzzvibO.vibrat.value(0)
+    displayO.oled.fill(0)
+    displayO.show_frame()
+    lock=["Vibration","ON"]
+    displayO.show_static_frame(lock,len(lock))
+    sLock.release()
+    
+   
+def sound_m():
+    print("sound")
     
 def launch(item):
   global current_m,chosen_wf
@@ -316,7 +331,9 @@ def launch(item):
     "Back to Conf": go_back,
     "Min": min_m,
     "Max": max_m,
-    "Stand reminder": stand_rem
+    "Stand reminder": stand_rem,
+    "Vibration": toggle_vibration,
+    "Sound": sound_m
   }
   if wifiO.saved_json:
       w_l=list(wifiO.saved_json.keys())

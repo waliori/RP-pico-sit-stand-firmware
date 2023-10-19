@@ -1,6 +1,6 @@
 from microdot_asyncio import Microdot, Response
 from machine import Pin, Timer, I2C, PWM
-import display, motor, wifi, calibration, menu, presets
+import display, motor, wifi, calibration, menu, presets, buzz_vib
 import utime
 import os, sys
 import uasyncio as asyncio
@@ -26,11 +26,13 @@ except:
     file.write(json.dumps({"current_encoder":0}))
     current_encoder = 0
   
-#relay for motor
+#bridge for motor
 r_pwm_pin = 0
 l_pwm_pin = 1
-pwm1 = PWM(Pin(r_pwm_pin, Pin.OUT)) #R_PWM
-pwm2 = PWM(Pin(l_pwm_pin, Pin.OUT)) #L_PWM
+pwm1 = PWM(Pin(r_pwm_pin, Pin.OUT)) #R_PWM SDA
+pwm2 = PWM(Pin(l_pwm_pin, Pin.OUT)) #L_PWM SCL
+
+
 duty = 0
 pwm1.freq(16000)
 pwm1.duty_u16(duty)
@@ -44,27 +46,29 @@ app = Microdot()
 
 
 #buttons
-up_button = Pin(14, Pin.IN, Pin.PULL_UP)#up
-down_button = Pin(15, Pin.IN, Pin.PULL_UP)#down
-one_button = Pin(10, Pin.IN, Pin.PULL_UP)#1
-two_button = Pin(11, Pin.IN, Pin.PULL_UP)#2
-three_button = Pin(13, Pin.IN, Pin.PULL_UP)#3
+down_button = Pin(26, Pin.IN, Pin.PULL_UP)#down
+up_button = Pin(27, Pin.IN, Pin.PULL_UP)#up
+one_button = Pin(9, Pin.IN, Pin.PULL_UP)#1
+two_button = Pin(10, Pin.IN, Pin.PULL_UP)#2
+three_button = Pin(11, Pin.IN, Pin.PULL_UP)#3
 
 #rotary encoders
 #encoder 1 (interface)
-button_pin = Pin(21, Pin.IN, Pin.PULL_UP)
-direction_pin = Pin(17, Pin.IN, Pin.PULL_UP)
-step_pin  = Pin(18, Pin.IN, Pin.PULL_UP)
+button_pin = Pin(13, Pin.IN, Pin.PULL_UP) #scl
+direction_pin = Pin(15, Pin.IN, Pin.PULL_UP) #SCL clk
+step_pin  = Pin(14, Pin.IN, Pin.PULL_UP) # sdda dt
 #encoder 2 (motor position) - no need for switch
-outA = Pin(26, mode=Pin.IN) # Pin CLK of encoder 2
-outB = Pin(27, mode=Pin.IN) # Pin DT of encoder 2
+outA = Pin(20, mode=Pin.IN) # Pin CLK of encoder 2 #sda
+outB = Pin(21, mode=Pin.IN) # Pin DT of encoder 2 #scl
 
-
+#buzzer + vibrator
+buzzer = PWM(Pin(28))
+vibrat = Pin(16, Pin.OUT)
 
 
 # oled display init
 
-displayO = display.Display(128,64,1,7,6)
+displayO = display.Display(128,64,0,5,4)#TODO remove 1 argument not needed
 asyncio.sleep(2)
 print("initi displayO")
 menuO = menu.Menu(displayO)
@@ -77,6 +81,13 @@ displayO.reminder_time = calibrationO.reminder_time
 displayO.start_time = utime.ticks_ms()
 presetsO = presets.Presets(motorO,calibrationO,sLock)
 print("initi presetsO")
+
+buzzer.duty_u16(0)
+buzzer.freq(550)
+buzzvibO = buzz_vib.Buzzer(buzzer, vibrat)
+print("initi buzzvibO")
+
+
 
 # oled = displayO.init()
 # font_writer = writer.Writer(oled, freesans20)
