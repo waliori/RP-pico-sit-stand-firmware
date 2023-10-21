@@ -1,6 +1,7 @@
 from microdot_asyncio import Microdot, Response
 from machine import Pin, Timer, I2C, PWM
-import display, motor, wifi, calibration, menu, presets, buzz_vib
+import display, motor, wifi, calibration, menu, presets, buzz_vib, songs
+from rtttl import RTTTL
 import utime
 import os, sys
 import uasyncio as asyncio
@@ -63,12 +64,15 @@ outB = Pin(21, mode=Pin.IN) # Pin DT of encoder 2 #scl
 
 #buzzer + vibrator
 buzzer = PWM(Pin(28))
+volume=1000
 vibrat = Pin(16, Pin.OUT)
 
+buzzvibO = buzz_vib.Buzzer(buzzer, vibrat, volume, sLock)
+print("initi buzzvibO")
 
 # oled display init
 
-displayO = display.Display(128,64,0,5,4)#TODO remove 1 argument not needed
+displayO = display.Display(128,64,0,5,4,buzzvibO)
 asyncio.sleep(2)
 print("initi displayO")
 menuO = menu.Menu(displayO)
@@ -82,41 +86,5 @@ displayO.start_time = utime.ticks_ms()
 presetsO = presets.Presets(motorO,calibrationO,sLock)
 print("initi presetsO")
 
-buzzer.duty_u16(0)
-buzzer.freq(550)
-buzzvibO = buzz_vib.Buzzer(buzzer, vibrat)
-print("initi buzzvibO")
 
 
-
-# oled = displayO.init()
-# font_writer = writer.Writer(oled, freesans20)
-
-
-#TODO change here 
-# wifiO.start_connection()
-
-
-
-#display
-# line = 1 
-# highlight = 1
-# shift = 0
-# list_length = 0
-# total_lines = 5
-# line_height = 10
-# # for tracking the direction and button state
-# previous_value = True
-# button_down = False
-# value = 0
-# 
-# #for entering min max table height
-
-# min_height = 0
-# _10 = False
-# _100 = False
-# #state to enable/disable motor
-# disable_motor = False
-
-# Read the last state of CLK pin in the initialisaton phase of the program 
-# outA_last = outA.value()
