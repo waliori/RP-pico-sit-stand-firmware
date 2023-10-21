@@ -7,11 +7,12 @@ import machine
 # import math
 
 # Motor Section
-
-        
+#TODO modifier go height to calculate current height + wanted height < max
+#TODO add acceleration + position to know if impact        
 current_m = ".."
 menu_list = ["..", "WiFi","Configuration", "Lock Unlock", "Show Presets", "Show min/max", "Collision Reset", "Factory Reset"]
-conf_menu = ["Go back","Sleep after","Set min/max", "Stand reminder"]
+conf_menu = ["Go back","Sleep after","Set min/max", "Stand reminder","Vibration", "Sound"]
+sound_menu = ["Back to Conf","On/Off","Melodies"]
 menu = ["Back to Wifi","Connect","Forget"]
 mm = ["Back to Conf","Min","Max"]
 chosen_wf = ""
@@ -212,7 +213,7 @@ def go_back():
         wifi_menu()
     elif current_m in ["WiFi","Lock Unlock", "Show Presets", "Show min/max", "Collision Reset", "Factory Reset","Configuration","Go back"]:
         show_menu(menu_list)
-    elif current_m in ["Sleep after","Back to Conf"]:
+    elif current_m in ["Sleep after","Back to Conf", "Vibration"]:
         current_m = "Configuration"
         config_menu()
     elif current_m == "..":
@@ -286,7 +287,51 @@ def max_m():
     displayO.oled.show()
     sLock.release()
 
+def toggle_vibration():
+    sLock.acquire()
+    buzzvibO.toggle_vibration()  # Toggle vibration state
+    displayO.oled.fill(0)
+    
+    if buzzvibO.vibration:
+        buzzvibO.vibrat.value(1)  # Vibrate when vibration is on
+        lock = ["Vibration", "ON"]
+    else:
+        buzzvibO.vibrat.value(0)
+        lock = ["Vibration", "OFF"]
 
+    displayO.show_frame()
+    displayO.show_static_frame(lock, len(lock))
+    utime.sleep(1)
+    buzzvibO.vibrat.value(0)
+    sLock.release()
+    displayO.oled.fill(0)
+    config_menu()
+
+def toggle_sound():
+    sLock.acquire()
+    buzzvibO.toggle_sound()  # Toggle vibration state
+    displayO.oled.fill(0)
+    
+    if buzzvibO.sound:
+        buzzvibO.buzzer.duty_u16(440)  # Vibrate when vibration is on
+        lock = ["Sound", "ON"]
+    else:
+        buzzvibO.buzzer.duty_u16(0)
+        lock = ["Sound", "OFF"]
+
+    displayO.show_frame()
+    displayO.show_static_frame(lock, len(lock))
+    utime.sleep(1)
+    buzzvibO.buzzer.duty_u16(0)
+    sLock.release()
+    displayO.oled.fill(0)
+    config_menu()
+    
+    
+   
+def sound_m():
+    print("sound")
+    toggle_sound()
     
 def launch(item):
   global current_m,chosen_wf
@@ -316,7 +361,9 @@ def launch(item):
     "Back to Conf": go_back,
     "Min": min_m,
     "Max": max_m,
-    "Stand reminder": stand_rem
+    "Stand reminder": stand_rem,
+    "Vibration": toggle_vibration,
+    "Sound": sound_m
   }
   if wifiO.saved_json:
       w_l=list(wifiO.saved_json.keys())
@@ -535,6 +582,7 @@ def awake():
     sLock.release()                                                                                                                                              
 
 def stp_rem():
+    buzzvibO.stop()
     sLock.acquire()
     global start_tm_rem
     displayO.stp_alarm()
@@ -598,6 +646,24 @@ def set_rem_value(rem_value):
     displayO.oled.fill(0)
     config_menu()
     
+loop = asyncio.get_event_loop()
+
+async def alarm():
+    tune = RTTTL(songs.find(buzzvibO.melody))
+    try:
+        x=True
+        buzzvibO.stop_flag = False
+        
+        for freq, msec in tune.notes():
+            displayO.show_reminder_frame()
+            displayO.oled.invert(x)
+            x=not x
+            if buzzvibO.stop_flag:
+                buzzvibO.play_tone(0, 0)
+                break
+            buzzvibO.play_tone(freq, msec)
+    except KeyboardInterrupt:
+        buzzvibO.play_tone(0, 0)
 
 
 # @micropython.native
@@ -615,7 +681,7 @@ def task_display_navigation():
     sleep_previousValue = calibrationO.sleep_time+1
     rem_value = calibrationO.reminder_time
     rem_previousValue = calibrationO.reminder_time+1    
-    x=True
+#     x=True
     while True:
         sLock.acquire()
         # not calibrated and not semi calibrated and not idle (AKA first boot of the system)
@@ -1023,10 +1089,10 @@ def task_display_navigation():
                     pb_one.long_func(stp_rem, ())
                     pb_two.long_func(stp_rem, ())
                     pb_three.long_func(stp_rem, ())
-                    displayO.show_reminder_frame()
-                    displayO.oled.invert(x)
-                    x=not x
-                    utime.sleep_ms(500)        
+                    loop.run_until_complete(alarm())
+                    
+                    
+                    
 
                 
                 elif displayO.sleep_state and not menuO.menu_state and not displayO.lock_state and calibrationO.speed_calibrated:
@@ -1061,11 +1127,12 @@ def task_display_navigation():
 
 
 # loop = asyncio.get_event_loop()
-loop = asyncio.get_event_loop()
+
 
 
 # @micropython.native
 def toggle_server(loop,operation):
+    print("in async")
     if not wifiO.wlan.isconnected():
         print("nothing to do")
         return
