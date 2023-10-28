@@ -20,6 +20,8 @@ class Menu:
         self.forget_w_state = False
         self.s_w_state = False
         self.cf_h_state = False
+        self.cf_s_state = False
+        self.cf_mel_state = False
         self.min_state = False
         self.max_state = False
         
@@ -35,7 +37,6 @@ class Menu:
         self.displayO.show_header("Home",wifi,ap)
         self.displayO.show_frame()
         self.displayO.show_height_frame(str(real_height(counter)))
-
         
     def move_menu_encoder(self,step_pin,direction_pin,menu_list,header,wifi,ap):
         list_length = len(menu_list)
@@ -58,6 +59,34 @@ class Menu:
                         if self.shift+tot < list_length:
                             self.shift += 1
                 self.displayO.show_menu(menu_list,self.line, self.highlight, self.shift,tot,header,wifi,ap)
+            self.previous_value = step_pin.value()
+        
+    def move_exec_menu_encoder(self,step_pin,direction_pin,menu_list,header,wifi,ap,item_callback=None):
+        list_length = len(menu_list)
+        tot = min(list_length,self.total_lines)
+        if self.previous_value != step_pin.value():
+            if step_pin.value() == False:
+                try:
+                    # Turned Left 
+                    if direction_pin.value() == False:
+                        if self.highlight > 1:
+                            self.highlight -= 1  
+                        else:
+                            if self.shift > 0:
+                                self.shift -= 1  
+                    # Turned Right
+                    else:
+                        if self.highlight < tot:
+                            self.highlight += 1
+                        else: 
+                            if self.shift+tot < list_length:
+                                self.shift += 1
+                    self.displayO.show_menu(menu_list,self.line, self.highlight, self.shift,tot,header,wifi,ap)
+                    if item_callback is not None:
+                        highlighted_item = menu_list[self.highlight+self.shift - 1]  # Subtract 1 to get the correct item index
+                        item_callback(highlighted_item)
+                except Exception as e:
+                    print("Error in move_exec_menu_encoder:", e)
             self.previous_value = step_pin.value()
             
     def move_menu_buttons(self, direction, menu_list,header,wifi,ap):
