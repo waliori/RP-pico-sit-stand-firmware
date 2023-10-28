@@ -40,3 +40,6 @@ def find(name):
         song_name = song.split(':')[0]
         if song_name == name:
             return song
+def list_s():
+    return [ song.split(':')[0] for song in SONGS ]
+    

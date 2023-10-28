@@ -2,6 +2,7 @@
 # This should also work with any ESP32  
 import time, json
 import uasyncio as asyncio
+import songs
 class Buzzer:
     def __init__(self, buzzer, vibrat,volume,sLock):
         self.buzzer = buzzer
@@ -11,6 +12,7 @@ class Buzzer:
         self.buzzer.duty_u16(0)
         self.vibrat.value(0)
         self.stop_flag = False
+        self.tsk = None
         try:
             with open("s_v.json", "r") as settings_file:
                 settings_json = json.load(settings_file)
@@ -25,9 +27,18 @@ class Buzzer:
                 self.melody = "StarWars"
                 settings_file.write(json.dumps({"sound": self.sound, "vibration": self.vibration, "melody": self.melody}))
             self.sLock.release()
-
+        self.songs = ["Back to Sounds"]+[f"-> {song}" if song == self.melody else song for song in [self.melody] + [song for song in songs.list_s() if song != self.melody]]
+#         self.songs.insert(0,"Back to Sounds")
         
-    
+    def set_song(self, melody):
+#         if melody != "Back to Sounds":
+        self.sLock.acquire()
+        if melody != "Back to Sounds":
+            self.melody = melody
+            self.songs = ["Back to Sounds"]+[f"-> {song}" if song == self.melody else song for song in [self.melody] + [song for song in songs.list_s() if song != self.melody]]
+            self.save_settings()
+        self.sLock.release()  
+        
     def play_tone(self,freq, msec):
 #         print('freq = {:6.1f} msec = {:6.1f}'.format(freq, msec))
         if freq > 0:
@@ -41,7 +52,7 @@ class Buzzer:
         self.vibrat.value(0)
         time.sleep_ms( int(msec * 0.1 ) )
 
-    async def play(self,tune):
+    def play(self,tune):
         try:
             self.stop_flag = False
             for freq, msec in tune.notes():

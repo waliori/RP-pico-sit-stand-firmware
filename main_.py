@@ -61,7 +61,7 @@ def forget_wf(wifi):
     sLock.release()
     
 def forget_wifi(wifi):
-    print(wifi)
+#     print(wifi)
     wifiO.forget_wifi(wifi)
     go_home()
     
@@ -115,6 +115,7 @@ def config_menu():
     displayO.show_frame()
     menuO.cf_state = True #mimic menustate
     menuO.cf_h_state = False
+    menuO.cf_s_state = False
     menuO.wc_state = False
     menuO.wc_c_state = False
     menuO.s_w_state = False
@@ -184,9 +185,39 @@ def c_wifi(wifi):
     displayO.show_frame()  
     displayO.show_menu(menu, line, menuO.highlight, menuO.shift,min(len(menu),menuO.total_lines),wifi,wifiO.wifi,wifiO.aps)
 
-        
+button_pressed = False
+current_melody_id = None
+
+async def a_c_melody(melody,melody_id):
+    global button_pressed
+    buzzvibO.play_tone(0, 0)
+    if melody != "Back to Sounds":
+        tune = RTTTL(songs.find(melody))
+        try:
+            buzzvibO.stop_flag = False
+            button_pressed = False
+            for freq, msec in tune.notes():
+                if melody_id != current_melody_id or button_pressed or buzzvibO.stop_flag:
+                    buzzvibO.play_tone(0, 0)  # Stop playing
+                    break
+                buzzvibO.play_tone(freq, msec)
+                await asyncio.sleep(msec / 30000)  # Yield control to the event loop
+        except KeyboardInterrupt:
+            buzzvibO.play_tone(0, 0)
 
 
+def c_melody(melody):
+    global loop, current_melody_id
+    melody = melody.replace("-> ", "")
+    current_melody_id = id(melody)
+    loop.create_task(a_c_melody(melody,current_melody_id))
+
+    
+def ch_melody(melody):    
+    buzzvibO.set_song(melody)
+    sound_m()                                                                                                                                                                               
+
+    
 def go_home():
     sLock.acquire()    
     calibrationO.idle_state = True
@@ -195,19 +226,22 @@ def go_home():
     menuO.wc_c_state = False
     menuO.cf_state = False
     menuO.cf_h_state=False
+    menuO.cf_s_state = False
+    menuO.cf_mel_state = False
     menuO.min_state = False
     menuO.max_state = False
     menuO.presets_state = False
     menuO.slp_state=False
     menuO.forget_w_state = False
     menuO.rem_state = False
+    buzzvibO.play_tone(0, 0)
     menuO.go_home(wifiO.wifi,wifiO.aps,calibrationO.real_height,motorO.counter)
     sLock.release()
 
     
 def go_back():
     global current_m, menu_list
-    print(current_m)
+#     print(current_m)
     if current_m in ["Show IP","Back to Wifi"]:
         current_m = "WiFi"
         wifi_menu()
@@ -215,7 +249,7 @@ def go_back():
         show_menu(menu_list)
     elif current_m in ["Sleep after","Back to Conf", "Vibration"]:
         current_m = "Configuration"
-        config_menu()
+        config_menu()    
     elif current_m == "..":
         go_home()
 
@@ -325,65 +359,98 @@ def toggle_sound():
     buzzvibO.buzzer.duty_u16(0)
     sLock.release()
     displayO.oled.fill(0)
-    config_menu()
+    sound_m()
     
     
    
 def sound_m():
-    print("sound")
-    toggle_sound()
+#     sLock.acquire() 
+    menuO.highlight = 1
+    menuO.shift = 0
+    menuO.cf_s_state =True
+    menuO.cf_state = False
+    menuO.cf_mel_state = False
+    line = 1  
+    displayO.oled.fill(0)
+    displayO.show_frame()  
+    displayO.show_menu(sound_menu, line, menuO.highlight, menuO.shift,min(len(sound_menu),menuO.total_lines),"Sound",wifiO.wifi,wifiO.aps)
+#     sLock.release() 
+#     toggle_sound()
+   
+   
+def melodies_m():
+    global button_pressed
+    button_pressed = False
+    menuO.highlight = 1
+    menuO.shift = 0
+    menuO.cf_mel_state =True   
+    line = 1  
+    displayO.oled.fill(0)
+    displayO.show_frame()
+
+    displayO.show_menu(buzzvibO.songs, line, menuO.highlight, menuO.shift,min(len(buzzvibO.songs),menuO.total_lines),"Melodies",wifiO.wifi,wifiO.aps)
     
 def launch(item):
-  global current_m,chosen_wf
-  current_m = item
-#   sLock.acquire()
-  actions = {
-    "..": go_home,
-    "Show Presets": show_presets,
-    "Factory Reset": confirm_reset,
-    "Show min/max": show_calibration,
-    "Show IP" : show_ip,
-    "Lock Unlock": lock_unlock,
-    "WiFi" : wifi_menu,
-    "Collision Reset": confirm_reset_collision,
-    "Disconnect": disconnect,
-    "Scan again": wifi_menu,
-    "Go back": go_back,
-    "Back to Wifi": go_back,
-    "Configuration": config_menu,
-    "Sleep after": set_sleep,
-    "Start AP": start_ap,
-    "Stop AP": stop_ap,
-    "Connect": connect_c_wifi,
-    "Forget": forget_wf,
-    "Saved WiFi": list_saved_wifi,
-    "Set min/max": set_minmax,
-    "Back to Conf": go_back,
-    "Min": min_m,
-    "Max": max_m,
-    "Stand reminder": stand_rem,
-    "Vibration": toggle_vibration,
-    "Sound": sound_m
-  }
-  if wifiO.saved_json:
-      w_l=list(wifiO.saved_json.keys())
-      w_l.extend([f"->{w}" for w in w_l])
-      for wf in w_l:
-          actions[wf] = c_wifi
-#           actions[wf] = connect_c_wifi
+    global current_m, chosen_wf, button_pressed
+    button_pressed = True
+    current_m = item
+    actions = {
+        "..": go_home,
+        "Show Presets": show_presets,
+        "Factory Reset": confirm_reset,
+        "Show min/max": show_calibration,
+        "Show IP": show_ip,
+        "Lock Unlock": lock_unlock,
+        "WiFi": wifi_menu,
+        "Collision Reset": confirm_reset_collision,
+        "Disconnect": disconnect,
+        "Scan again": wifi_menu,
+        "Go back": go_back,
+        "Back to Wifi": go_back,
+        "Configuration": config_menu,
+        "Sleep after": set_sleep,
+        "Start AP": start_ap,
+        "Stop AP": stop_ap,
+        "Connect": connect_c_wifi,
+        "Forget": forget_wf,
+        "Saved WiFi": list_saved_wifi,
+        "Set min/max": set_minmax,
+        "Back to Conf": go_back,
+        "Min": min_m,
+        "Max": max_m,
+        "Stand reminder": stand_rem,
+        "Vibration": toggle_vibration,
+        "Sound": sound_m,
+        "On/Off": toggle_sound,
+        "Melodies": melodies_m
+    }
+    if wifiO.saved_json: #TODO add condition not be executed each launch but only if menu is correct oine 
+        w_l = list(wifiO.saved_json.keys())
+        w_l.extend([f"->{w}" for w in w_l])
+        for wf in w_l:
+            actions[wf] = c_wifi
+
+    for song in buzzvibO.songs:
+        actions[song] = ch_melody
+
+    default_action = lambda: print("No action defined for this item")
+    action = actions.get(item, default_action)
     
-#   sLock.release()
-  default_action = lambda: print("No action defined for this item")
-  action = actions.get(item, default_action)
-  if wifiO.saved_json and any(x in w_l for x in [item,f"->{item}"]):
-    if not '->' in item:
-      action(item)
+    if wifiO.saved_json and any(x in w_l for x in [item, f"->{item}"]):
+        if "->" not in item:
+            action(item)
+        else:
+            action(item.replace("->", "")) 
+    if any(x in buzzvibO.songs for x in [item, f"->{item}"]):
+        if "->" not in item:
+            action(item)        
+        else:
+            action(item.replace("-> ", ""))     
+    elif item in ["Connect", "Forget"]:
+        action(chosen_wf)
     else:
-      action(item.replace("->",""))
-  elif item in ["Connect", "Forget"]:
-    action(chosen_wf)
-  else:
-    action()
+        action()
+    
   
 
 
@@ -1025,6 +1092,25 @@ def task_display_navigation():
                 pb_one.release_func(disable_button, ())
                 pb_two.release_func(disable_button, ())
                 pb_three.release_func(disable_button, ())
+        elif menuO.cf_s_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
+            if menuO.cf_mel_state:
+                menuO.move_exec_menu_encoder(step_pin,direction_pin,buzzvibO.songs,"Melodies",wifiO.wifi,wifiO.aps,c_melody)                                  
+                pb_up.press_func(menuO.move_menu_buttons, ("up",buzzvibO.songs,"Melodies",wifiO.wifi,wifiO.aps,))
+                pb_down.press_func(menuO.move_menu_buttons, ("down",buzzvibO.songs,"Melodies",wifiO.wifi,wifiO.aps,))
+                pb_switch.release_func(launch, (buzzvibO.songs[(menuO.highlight-1) + menuO.shift],))
+                pb_switch.long_func(go_home, ())
+                pb_one.release_func(disable_button, ())
+                pb_two.release_func(disable_button, ())
+                pb_three.release_func(disable_button, ())
+            else:
+                menuO.move_menu_encoder(step_pin,direction_pin,sound_menu,"Sound",wifiO.wifi,wifiO.aps)                                  
+                pb_up.press_func(menuO.move_menu_buttons, ("up",sound_menu,"Sound",wifiO.wifi,wifiO.aps,))
+                pb_down.press_func(menuO.move_menu_buttons, ("down",sound_menu,"Sound",wifiO.wifi,wifiO.aps,))
+                pb_switch.release_func(launch, (sound_menu[(menuO.highlight-1) + menuO.shift],))
+                pb_switch.long_func(go_home, ())
+                pb_one.release_func(disable_button, ())
+                pb_two.release_func(disable_button, ())
+                pb_three.release_func(disable_button, ())
         elif motorO.api and not menuO.presets_state and not menuO.menu_state and not calibrationO.idle_state and calibrationO.speed_calibrated:
             pb_up.press_func(disable_button, ())
             pb_down.press_func(disable_button, ())
@@ -1120,7 +1206,9 @@ def task_display_navigation():
                     pb_one.release_func(disable_button, ())
                     pb_two.release_func(disable_button, ())
                     pb_three.release_func(disable_button, ())
+#         loop.run_until_complete(asyncio.sleep(0))
         sLock.release()
+        
 
        
 
@@ -1132,9 +1220,7 @@ def task_display_navigation():
 
 # @micropython.native
 def toggle_server(loop,operation):
-    print("in async")
     if not wifiO.wlan.isconnected():
-        print("nothing to do")
         return
     loop.create_task(wifiO.serve(operation))
     if operation == "start":
@@ -1364,7 +1450,7 @@ def toggle_server(loop,operation):
             return res 
     
        
-
+# print("in main")
 
 if wifiO.wlan.isconnected():
     wifiO.stop()
