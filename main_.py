@@ -218,8 +218,10 @@ def ch_melody(melody):
     sound_m()                                                                                                                                                                               
 
     
-def go_home():
-    sLock.acquire()    
+def go_home():    
+    sLock.acquire()
+    buzzvibO.play_tone(0, 0)
+    buzzvibO.stop()
     calibrationO.idle_state = True
     menuO.s_w_state = False
     menuO.wc_state = False
@@ -233,8 +235,7 @@ def go_home():
     menuO.presets_state = False
     menuO.slp_state=False
     menuO.forget_w_state = False
-    menuO.rem_state = False
-    buzzvibO.play_tone(0, 0)
+    menuO.rem_state = False    
     menuO.go_home(wifiO.wifi,wifiO.aps,calibrationO.real_height,motorO.counter)
     sLock.release()
 
