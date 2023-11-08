@@ -394,6 +394,7 @@ def launch(item):
     global current_m, chosen_wf, button_pressed
     button_pressed = True
     current_m = item
+
     actions = {
         "..": go_home,
         "Show Presets": show_presets,
@@ -424,29 +425,26 @@ def launch(item):
         "On/Off": toggle_sound,
         "Melodies": melodies_m
     }
-    if wifiO.saved_json: #TODO add condition not be executed each launch but only if menu is correct oine 
-        w_l = list(wifiO.saved_json.keys())
-        w_l.extend([f"->{w}" for w in w_l])
-        for wf in w_l:
-            actions[wf] = c_wifi
 
-    for song in buzzvibO.songs:
-        actions[song] = ch_melody
+    def extend_actions(prefix, keys, action):
+        for key in keys:
+            actions[prefix + key] = lambda item=key: action(item)
 
-    default_action = lambda: print("No action defined for this item")
+    if wifiO.saved_json:
+        keys = list(wifiO.saved_json.keys())
+        extend_actions("", keys, c_wifi)
+        extend_actions("->", keys, c_wifi)
+
+    extend_actions("", buzzvibO.songs, ch_melody)
+    extend_actions("->", buzzvibO.songs, ch_melody)
+
+    def default_action(): 
+        print("No action defined for this item")
+
     action = actions.get(item, default_action)
     
-    if wifiO.saved_json and any(x in w_l for x in [item, f"->{item}"]):
-        if "->" not in item:
-            action(item)
-        else:
-            action(item.replace("->", "")) 
-    if any(x in buzzvibO.songs for x in [item, f"->{item}"]):
-        if "->" not in item:
-            action(item)        
-        else:
-            action(item.replace("-> ", ""))     
-    elif item in ["Connect", "Forget"]:
+    special_cases = ["Connect", "Forget"]
+    if item in special_cases:
         action(chosen_wf)
     else:
         action()
@@ -833,7 +831,7 @@ def task_display_navigation():
                     height_previousValue = step_pin.value()
                     utime.sleep_ms(1)    
         if menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
-            menuO.move_menu_encoder(step_pin,direction_pin,menu_list,"Menu",wifiO.wifi,wifiO.aps)                                  
+            menuO.move_exec_menu_encoder(step_pin,direction_pin,menu_list,"Menu",wifiO.wifi,wifiO.aps)                                  
             pb_up.press_func(handle_button, (menuO.move_menu_buttons,("up",menu_list,"Menu",wifiO.wifi,wifiO.aps,)))
             pb_down.press_func(handle_button, (menuO.move_menu_buttons,("down",menu_list,"Menu",wifiO.wifi,wifiO.aps,)))
             pb_switch.release_func(handle_button, (launch, (menu_list[(menuO.highlight-1) + menuO.shift],)))
@@ -898,7 +896,7 @@ def task_display_navigation():
             pb_three.release_func(disable_button, ())
         # Show list of wifis
         elif menuO.wc_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
-            menuO.move_menu_encoder(step_pin,direction_pin,wifiO.nearby,"Wifi",wifiO.wifi,wifiO.aps)                                  
+            menuO.move_exec_menu_encoder(step_pin,direction_pin,wifiO.nearby,"Wifi",wifiO.wifi,wifiO.aps)                                  
             pb_up.press_func(menuO.move_menu_buttons, ("up",wifiO.nearby,"Wifi",wifiO.wifi,wifiO.aps,))
             pb_down.press_func(menuO.move_menu_buttons, ("down",wifiO.nearby,"Wifi",wifiO.wifi,wifiO.aps,))
             pb_switch.release_func(launch, (wifiO.nearby[(menuO.highlight-1) + menuO.shift],))
@@ -907,7 +905,7 @@ def task_display_navigation():
             pb_two.release_func(disable_button, ())
             pb_three.release_func(disable_button, ())
         elif menuO.wc_c_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
-            menuO.move_menu_encoder(step_pin,direction_pin,menu,chosen_wf,wifiO.wifi,wifiO.aps)                                  
+            menuO.move_exec_menu_encoder(step_pin,direction_pin,menu,chosen_wf,wifiO.wifi,wifiO.aps)                                  
             pb_up.press_func(menuO.move_menu_buttons, ("up",menu,chosen_wf,wifiO.wifi,wifiO.aps,))
             pb_down.press_func(menuO.move_menu_buttons, ("down",menu,chosen_wf,wifiO.wifi,wifiO.aps,))
             pb_switch.release_func(launch, (menu[(menuO.highlight-1) + menuO.shift],))
@@ -928,7 +926,7 @@ def task_display_navigation():
             w_l = list(saved_wifis.keys())
             if wifiO.wlan.isconnected():
                 w_l[w_l.index(wifiO.ssid)] = f"->{wifiO.ssid}"
-            menuO.move_menu_encoder(step_pin,direction_pin,w_l,"Wifis",wifiO.wifi,wifiO.aps)                                  
+            menuO.move_exec_menu_encoder(step_pin,direction_pin,w_l,"Wifis",wifiO.wifi,wifiO.aps)                                  
             pb_up.press_func(menuO.move_menu_buttons, ("up",w_l,"Wifis",wifiO.wifi,wifiO.aps,))
             pb_down.press_func(menuO.move_menu_buttons, ("down",w_l,"Wifis",wifiO.wifi,wifiO.aps,))
             pb_switch.release_func(launch, (w_l[(menuO.highlight-1) + menuO.shift],))
@@ -1010,7 +1008,7 @@ def task_display_navigation():
                     rem_previousValue = step_pin.value()
                     utime.sleep_ms(1)
             else:
-                menuO.move_menu_encoder(step_pin,direction_pin,conf_menu,"Config",wifiO.wifi,wifiO.aps)                                  
+                menuO.move_exec_menu_encoder(step_pin,direction_pin,conf_menu,"Config",wifiO.wifi,wifiO.aps)                                  
                 pb_up.press_func(menuO.move_menu_buttons, ("up",conf_menu,"Config",wifiO.wifi,wifiO.aps,))
                 pb_down.press_func(menuO.move_menu_buttons, ("down",conf_menu,"Config",wifiO.wifi,wifiO.aps,))
                 pb_switch.release_func(launch, (conf_menu[(menuO.highlight-1) + menuO.shift],))
@@ -1084,7 +1082,7 @@ def task_display_navigation():
                     max_height_previousValue = step_pin.value()
                     utime.sleep_ms(1)
             else:
-                menuO.move_menu_encoder(step_pin,direction_pin,mm,"min/max",wifiO.wifi,wifiO.aps)                                  
+                menuO.move_exec_menu_encoder(step_pin,direction_pin,mm,"min/max",wifiO.wifi,wifiO.aps)                                  
                 pb_up.press_func(menuO.move_menu_buttons, ("up",mm,"min/max",wifiO.wifi,wifiO.aps,))
                 pb_down.press_func(menuO.move_menu_buttons, ("down",mm,"min/max",wifiO.wifi,wifiO.aps,))
                 pb_switch.release_func(launch, (mm[(menuO.highlight-1) + menuO.shift],))
@@ -1095,15 +1093,15 @@ def task_display_navigation():
         elif menuO.cf_s_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
             if menuO.cf_mel_state:
                 menuO.move_exec_menu_encoder(step_pin,direction_pin,buzzvibO.songs,"Melodies",wifiO.wifi,wifiO.aps,c_melody)                                  
-                pb_up.press_func(menuO.move_menu_buttons, ("up",buzzvibO.songs,"Melodies",wifiO.wifi,wifiO.aps,))
-                pb_down.press_func(menuO.move_menu_buttons, ("down",buzzvibO.songs,"Melodies",wifiO.wifi,wifiO.aps,))
+                pb_up.press_func(menuO.move_menu_buttons, ("up",buzzvibO.songs,"Melodies",wifiO.wifi,wifiO.aps,c_melody,))
+                pb_down.press_func(menuO.move_menu_buttons, ("down",buzzvibO.songs,"Melodies",wifiO.wifi,wifiO.aps,c_melody))
                 pb_switch.release_func(launch, (buzzvibO.songs[(menuO.highlight-1) + menuO.shift],))
                 pb_switch.long_func(go_home, ())
                 pb_one.release_func(disable_button, ())
                 pb_two.release_func(disable_button, ())
                 pb_three.release_func(disable_button, ())
             else:
-                menuO.move_menu_encoder(step_pin,direction_pin,sound_menu,"Sound",wifiO.wifi,wifiO.aps)                                  
+                menuO.move_exec_menu_encoder(step_pin,direction_pin,sound_menu,"Sound",wifiO.wifi,wifiO.aps)                                  
                 pb_up.press_func(menuO.move_menu_buttons, ("up",sound_menu,"Sound",wifiO.wifi,wifiO.aps,))
                 pb_down.press_func(menuO.move_menu_buttons, ("down",sound_menu,"Sound",wifiO.wifi,wifiO.aps,))
                 pb_switch.release_func(launch, (sound_menu[(menuO.highlight-1) + menuO.shift],))
