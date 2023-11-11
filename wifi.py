@@ -85,6 +85,7 @@ class Wifi:
             self.nearby.remove(self.wlan.config("ssid"))
             self.nearby.insert(len(self.nearby)-1,"Show IP")
             self.nearby.insert(len(self.nearby)-1,"Disconnect")
+            self.nearby.insert(len(self.nearby)-1,"Toggle API")
         else:
             print("AP state")
             print(self.ap.active())
@@ -329,13 +330,16 @@ class Wifi:
                 print('Starting microdot app')
                 try:
                     self.server = True
+                    self.aps = y_a_ico
                     self.app.run(port=80, debug=True)                    
                 except:
                     self.server = False
+                    self.aps = n_a_ico
                     self.app.shutdown()                    
                 else:
                     print("not connected to wifi")
         else:
+            self.aps = n_a_ico
             self.app.shutdown()
             self.server = False
             
