@@ -390,7 +390,24 @@ def melodies_m():
     displayO.show_frame()
 
     displayO.show_menu(buzzvibO.songs, line, menuO.highlight, menuO.shift,min(len(buzzvibO.songs),menuO.total_lines),"Melodies",wifiO.wifi,wifiO.aps)
-    
+
+def toggle_api():
+    sLock.acquire()
+    displayO.oled.fill(0)
+    if wifiO.server:
+        lock = ["API", "Off"]
+        loop.create_task(wifiO.serve("stop"))
+    else:
+        lock = ["API", "On"]
+        loop.create_task(wifiO.serve("start"))
+    displayO.show_frame()
+    displayO.show_static_frame(lock, len(lock))    
+    utime.sleep(1)    
+    sLock.release()
+    displayO.oled.fill(0)
+    wifi_menu()
+
+
 def launch(item):
     global current_m, chosen_wf, button_pressed
     button_pressed = True
@@ -424,7 +441,8 @@ def launch(item):
         "Vibration": toggle_vibration,
         "Sound": sound_m,
         "On/Off": toggle_sound,
-        "Melodies": melodies_m
+        "Melodies": melodies_m,
+        "Toggle API": toggle_api
     }
 
     def extend_actions(prefix, keys, action):
@@ -450,7 +468,7 @@ def launch(item):
     else:
         action()
     
-  
+
 
 
 # real height facilitator adding 10s and 100s when rotating the rotary encoder
