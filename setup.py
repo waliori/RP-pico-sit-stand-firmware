@@ -71,9 +71,9 @@ buzzvibO = buzz_vib.Buzzer(buzzer, vibrat, volume, sLock)
 print("initi buzzvibO")
 
 # oled display init
-
+sLock.acquire()
 displayO = display.Display(128,64,0,5,4,buzzvibO)
-asyncio.sleep(2)
+sLock.release()
 print("initi displayO")
 menuO = menu.Menu(displayO)
 print("initi menuO")
@@ -85,6 +85,9 @@ displayO.reminder_time = calibrationO.reminder_time
 displayO.start_time = utime.ticks_ms()
 presetsO = presets.Presets(motorO,calibrationO,sLock)
 print("initi presetsO")
-
+# led = Pin("LED", Pin.OUT)
+# led.off()
+# led.on()
+# print("initi all done")
 
 
