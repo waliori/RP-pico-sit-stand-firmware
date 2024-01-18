@@ -123,6 +123,7 @@ class SH1106(framebuf.FrameBuffer):
         self.poweron()
         # rotate90 requires a call to flip() for setting up.
         self.flip(self.flip_en)
+        self.write_cmd(_SET_CONTRAST | 0xff)
 
     def poweroff(self):
         self.write_cmd(_SET_DISP | 0x00)

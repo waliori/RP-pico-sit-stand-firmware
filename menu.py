@@ -22,6 +22,7 @@ class Menu:
         self.cf_h_state = False
         self.cf_s_state = False
         self.cf_mel_state = False
+        self.cf_st_state = False
         self.min_state = False
         self.max_state = False
         
@@ -46,18 +47,19 @@ class Menu:
                 try:
                     # Turned Left 
                     if direction_pin.value() == False:
-                        if self.highlight > 1:
-                            self.highlight -= 1  
-                        else:
-                            if self.shift > 0:
-                                self.shift -= 1  
-                    # Turned Right
-                    else:
                         if self.highlight < tot:
                             self.highlight += 1
                         else: 
                             if self.shift+tot < list_length:
                                 self.shift += 1
+                          
+                    # Turned Right
+                    else:
+                        if self.highlight > 1:
+                            self.highlight -= 1  
+                        else:
+                            if self.shift > 0:
+                                self.shift -= 1
                     self.displayO.show_menu(menu_list,self.line, self.highlight, self.shift,tot,header,wifi,ap)
                     if item_callback is not None:
                         highlighted_item = menu_list[self.highlight+self.shift - 1]  # Subtract 1 to get the correct item index

@@ -122,10 +122,10 @@ class Motor:
         direction = None
         if self.outA_current != self.outA_last:
             if outB.value() != self.outA_current:
-                self.counter += 1
+                self.counter -= 1
                 direction = 'up'
             else:
-                self.counter -= 1
+                self.counter += 1
                 direction = 'down'
         self.outA_last = self.outA_current
         self.rpm_updt()
@@ -235,9 +235,9 @@ class Motor:
         self.outA_current = outA.value()
         if self.outA_current != self.outA_last:
             if outB.value() != self.outA_current:
-                self.counter += 1
+                self.counter -= 1
             else:
-                self.counter -= 1 
+                self.counter += 1 
         self.outA_last = self.outA_current
         await asyncio.sleep_ms(1)
         
