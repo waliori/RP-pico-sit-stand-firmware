@@ -22,6 +22,7 @@ class Menu:
         self.cf_h_state = False
         self.cf_s_state = False
         self.cf_mel_state = False
+        self.cf_st_state = False
         self.min_state = False
         self.max_state = False
         

@@ -344,6 +344,7 @@ def toggle_vibration():
 
 def toggle_sound():
     sLock.acquire()
+    menuO.cf_st_state =True 
     buzzvibO.toggle_sound()  # Toggle vibration state
     displayO.oled.fill(0)
     
@@ -371,6 +372,7 @@ def sound_m():
     menuO.cf_s_state =True
     menuO.cf_state = False
     menuO.cf_mel_state = False
+    menuO.cf_st_state =False
     line = 1  
     displayO.oled.fill(0)
     displayO.show_frame()  
@@ -573,6 +575,14 @@ def factory_reset():
         print("File not found")
     try:
         os.remove("presets.json")
+    except:
+        print("File not found")
+    try:
+        os.remove("saved_wifi.json")
+    except:
+        print("File not found")
+    try:
+        os.remove("s_v.json")
     except:
         print("File not found")
     machine.reset()
@@ -786,7 +796,7 @@ def task_display_navigation():
                 
                 if height_previousValue != step_pin.value():
                     if step_pin.value() == False:
-                        if direction_pin.value() == False:
+                        if direction_pin.value() == True:
                             if height_value > 0:
                                 if calibrationO._01:
                                     height_value = max(height_value-0.1, 0)
@@ -826,7 +836,7 @@ def task_display_navigation():
                 pb_switch.release_func(calibrationO.real_calibrate, (height_value,))
                 if height_previousValue != step_pin.value():
                     if step_pin.value() == False:
-                        if direction_pin.value() == False:
+                        if direction_pin.value() == True:
                             if height_value > 0:
                                 if calibrationO._01:
                                     height_value = max(height_value-0.1, 0)
@@ -845,7 +855,7 @@ def task_display_navigation():
                                 height_value +=100
                             else:
                                 height_value +=1
-                        displayO.show_header("Calibration",wifiO.wifi,wifiO.aps)
+                        displayO.show_header("Setup",wifiO.wifi,wifiO.aps)
                         displayO.show_height_frame(str(round(height_value,1)),0)
                     height_previousValue = step_pin.value()
                     utime.sleep_ms(1)    
@@ -965,7 +975,7 @@ def task_display_navigation():
 #                 if sleep_value <= 86400:
                 if sleep_previousValue != step_pin.value():
                     if step_pin.value() == False:
-                        if direction_pin.value() == False:
+                        if direction_pin.value() == True:
                             if sleep_value > 0:
                                 if calibrationO._01:
                                     sleep_value = max(sleep_value - 10, 0)
@@ -1001,7 +1011,7 @@ def task_display_navigation():
 #                 if sleep_value <= 86400:
                 if rem_previousValue != step_pin.value():
                     if step_pin.value() == False:
-                        if direction_pin.value() == False:
+                        if direction_pin.value() == True:
                             if rem_value > 0:
                                 if calibrationO._01:
                                     rem_value = max(rem_value - 10, 0)
@@ -1045,7 +1055,7 @@ def task_display_navigation():
                 pb_switch.release_func(set_min, (min_height_value,))
                 if min_height_previousValue != step_pin.value():
                     if step_pin.value() == False:
-                        if direction_pin.value() == False:
+                        if direction_pin.value() == True:
                             if min_height_value > 0:
                                 if calibrationO._01:
                                     min_height_value = max(min_height_value-0.1, 0)
@@ -1077,7 +1087,7 @@ def task_display_navigation():
                 pb_switch.release_func(set_max, (max_height_value,))
                 if max_height_previousValue != step_pin.value():
                     if step_pin.value() == False:
-                        if direction_pin.value() == False:
+                        if direction_pin.value() == True:
                             if max_height_value > 0:
                                 if calibrationO._01:
                                     max_height_value = max(max_height_value-0.1, 0)
@@ -1116,6 +1126,14 @@ def task_display_navigation():
                 pb_down.press_func(menuO.move_menu_buttons, ("down",buzzvibO.songs,"Melodies",wifiO.wifi,wifiO.aps,c_melody))
                 pb_switch.release_func(launch, (buzzvibO.songs[(menuO.highlight-1) + menuO.shift],))
                 pb_switch.long_func(go_home, ())
+                pb_one.release_func(disable_button, ())
+                pb_two.release_func(disable_button, ())
+                pb_three.release_func(disable_button, ())
+            elif menuO.cf_st_state:
+                pb_up.press_func(disable_button, ())
+                pb_down.press_func(disable_button, ())
+                pb_switch.release_func(disable_button, ())
+                pb_switch.long_func(disable_button, ())
                 pb_one.release_func(disable_button, ())
                 pb_two.release_func(disable_button, ())
                 pb_three.release_func(disable_button, ())
@@ -1467,7 +1485,7 @@ def toggle_server(loop,operation):
             return res 
     
        
-# print("in main")
+_thread.start_new_thread(task_display_navigation, ())
 
 if wifiO.wlan.isconnected():
     wifiO.stop()
@@ -1477,7 +1495,7 @@ else:
     loop.create_task(wifiO.start_connection(calibrationO.real_height,motorO.counter))
     wifiO.wifi = bytearray(b'\xff\xff\x98\x1f\xc1\x87\xf7\xf1\xbb\xfd\xfc\x1f\xf6\x0f\xe7\x27\xff\xdf\xfe\x67\xfe\x73\xfe\x79\xff\xff\x00\x00\x00\x00\x00\x00')
 
-_thread.start_new_thread(task_display_navigation, ())
+
 
 
 try: 
