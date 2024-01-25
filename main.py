@@ -778,6 +778,8 @@ def task_display_navigation():
 #     x=True
     while True:
         sLock.acquire()
+        if motorO.is_moving():
+            accelO.show_accel()
         # not calibrated and not semi calibrated and not idle (AKA first boot of the system)
         if not calibrationO.calibrated and not calibrationO.semi_calibrated and not calibrationO.idle_state and not calibrationO.speed_calibrated:
             pb_up.press_func(move_motor, (up_button,True))
