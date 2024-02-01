@@ -61,6 +61,9 @@ class Motor:
             self.f_en(outA,outB)
         self.rpm = 0
 #             utime.sleep_us(1)
+
+    def is_moving(self):
+        return self.direction != 0
             
     def move_motor_backward(self,outA,outB,mini):
         for duty in range(0,65025,5):

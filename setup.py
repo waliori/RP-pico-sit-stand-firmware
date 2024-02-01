@@ -1,6 +1,6 @@
 from microdot_asyncio import Microdot, Response
 from machine import Pin, Timer, I2C, PWM
-import display, motor, wifi, calibration, menu, presets, buzz_vib, songs
+import display, motor, wifi, calibration, menu, presets, buzz_vib, songs, accelerometer
 from rtttl import RTTTL
 import utime
 import os, sys
@@ -69,6 +69,10 @@ vibrat = Pin(16, Pin.OUT)
 
 buzzvibO = buzz_vib.Buzzer(buzzer, vibrat, volume, sLock)
 print("initi buzzvibO")
+
+#accelerometer
+accelO = accelerometer.Accelerometer(sda=Pin(6),scl=Pin(7),freq=400000)
+print("initi accelerometer")
 
 # oled display init
 sLock.acquire()
