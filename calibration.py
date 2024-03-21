@@ -3,6 +3,24 @@ import json
 import utime
 import math
 import sys
+"""
+Functions:
+
+    semi_calibrate() -> set_max_enc()
+    real_semi_calibrate(real_heigh) -> save_max_real(real_heigh)
+    calibrate() -> set_min_enc()
+    real_calibrate(real_heigh) -> set_min_real(real_heigh)
+
+Flags:
+
+    idle_state -> system_idle
+    calibrated -> enc_calib
+    real_calibrated -> real_calib
+    semi_calibrated -> max_enc_set
+    real_semi_calibrated -> max_real_set
+    speed_calibrated -> speed_calib
+
+"""
 class Calibration:
     def __init__(self,displayO,motorO,sLock,wifi,aps):
         self.idle_state = False
@@ -36,8 +54,8 @@ class Calibration:
             self.min_encoder = settings_json["min_encoder"]
             self.max_real = settings_json["max_real"]
             self.min_real = settings_json["min_real"]
-            self.motorO.max_speed = settings_json["max_speed"]
-            self.motorO.min_speed = settings_json["min_speed"]
+            self.motorO.rpm_up = settings_json["rpm_up"]
+            self.motorO.rpm_down = settings_json["rpm_down"]
             self.sleep_time = settings_json["sleep_time"]
             self.reminder_time = settings_json["reminder_time"]
             if settings_json["sleep_time"] > 86400:
@@ -122,8 +140,8 @@ class Calibration:
         settings_json["max_encoder"] = self.max_encoder
         settings_json["min_real"] = self.min_real
         settings_json["max_real"] = self.max_real
-        settings_json["min_speed"] = self.motorO.min_speed
-        settings_json["max_speed"] = self.motorO.max_speed
+        settings_json["rpm_down"] = self.motorO.rpm_down
+        settings_json["rpm_up"] = self.motorO.rpm_up
         file=open("settings.json","w")
         file.write(json.dumps(settings_json))
         self.displayO.clear_frame()
@@ -140,10 +158,10 @@ class Calibration:
         self.sLock.acquire()
         settings = open("settings.json","r")
         settings_json = json.loads(settings.read())
-        settings_json["min_speed"] = self.motorO.min_speed
-        settings_json["max_speed"] = self.motorO.max_speed
+        settings_json["rpm_down"] = self.motorO.rpm_down
+        settings_json["rpm_up"] = self.motorO.rpm_up
         settings.close()
-        print(self.motorO.min_speed,self.motorO.max_speed)
+        print(self.motorO.rpm_down,self.motorO.rpm_up)
         file=open("settings.json","w")
         file.write(json.dumps(settings_json))
         file.close()
@@ -189,5 +207,3 @@ class Calibration:
         file=open("settings.json","w")
         file.write(json.dumps(settings_json))
         self.sLock.release()
-        
-        

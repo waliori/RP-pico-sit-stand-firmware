@@ -17,6 +17,8 @@ menu = ["Back to Wifi","Connect","Forget"]
 mm = ["Back to Conf","Min","Max"]
 chosen_wf = ""
 
+
+
 pb_up = Pushbutton(up_button, suppress=True)
 pb_down = Pushbutton(down_button, suppress=True)
 pb_switch = Pushbutton(button_pin, suppress = True)
@@ -28,7 +30,7 @@ pb_three = Pushbutton(three_button, suppress=True)
 # timeo = 0
 start_tm = time()
 start_tm_rem = time()
-
+print("initial setup done -------")
 def move_motor(button,calibration=False):
     motorO.move_motor(button,up_button,outA,outB,calibrationO.min_encoder, calibrationO.max_encoder, calibration )          
             
@@ -778,12 +780,14 @@ def task_display_navigation():
 #     x=True
     while True:
         sLock.acquire()
-        if motorO.is_moving():
-            accelO.show_accel()
+#         if motorO.is_moving():
+#             accelO.show_accel()
+#             current = curr_sens.read_current()
+#             print(f"DC Current = {current:.2f} Ampere")
         # not calibrated and not semi calibrated and not idle (AKA first boot of the system)
         if not calibrationO.calibrated and not calibrationO.semi_calibrated and not calibrationO.idle_state and not calibrationO.speed_calibrated:
             pb_up.press_func(move_motor, (up_button,True))
-            pb_down.press_func(move_motor, (down_button,True))
+            pb_down.press_func(move_motor, (down_button,True))#TODO mayber remove ability to go down
             pb_switch.release_func(calibrationO.semi_calibrate, ())
         # not calibrated but semi calibrated and not idle (highest point set) 
         elif not calibrationO.calibrated and  calibrationO.semi_calibrated and not calibrationO.idle_state and not calibrationO.speed_calibrated:
@@ -1244,6 +1248,12 @@ def task_display_navigation():
                     pb_two.release_func(disable_button, ())
                     pb_three.release_func(disable_button, ())
 #         loop.run_until_complete(asyncio.sleep(0))
+        
+#         if motorO.is_moving():
+#         print("Acceleration:", detector.mpu9250.acceleration)
+#         print("Gyro:", detector.mpu9250.gyro)
+#             if detector.collision_detected():
+#                 print("Action taken due to collision/rotation detection.")
         sLock.release()
         
 
@@ -1486,7 +1496,7 @@ def toggle_server(loop,operation):
             res.body = json.dumps({"status":  "ok"})              
             return res 
     
-       
+print("staarting main loop")       
 _thread.start_new_thread(task_display_navigation, ())
 
 if wifiO.wlan.isconnected():
@@ -1505,6 +1515,8 @@ try:
 except KeyboardInterrupt:
     print("closing")
     loop.close()
+
+
 
 
 

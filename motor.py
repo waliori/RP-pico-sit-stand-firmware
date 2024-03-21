@@ -3,7 +3,7 @@ import json
 import uasyncio as asyncio
 
 class Motor:
-    def __init__(self, pwm1, pwm2, counter,sLock):
+    def __init__(self, pwm1, pwm2, counter,sLock, accelerometer, current_sensor):
         self.pwm1 = pwm1
         self.pwm2 = pwm2
         self.counter = counter   # counter updates when encoder rotates
@@ -13,10 +13,10 @@ class Motor:
         self.sLock = sLock
         self.curren_position = counter
         self.api = False
-        self.max_speeds = 0
-        self.min_speeds = 0
-        self.max_speed = 0
-        self.min_speed = 0
+        self.up_rpms = 0
+        self.down_rpms = 0
+        self.rpm_up = 0
+        self.rpm_down = 0
         self.sens_list_tresh = 9999999
         self.sens_tresh = 0
         self.block_err_cnt = 0
@@ -29,9 +29,19 @@ class Motor:
         self.rpm = 0
         self.current_direction = None
         self.current_duty = 0
+        #added for accel and current
+        self.accelerometer = accelerometer
+        self.current_sensor = current_sensor
+        self.up_current = 0
+        self.down_current = 0
+        self.up_accel = (0, 0, 0)
+        self.down_accel = (0, 0, 0)
         
     #TODO test real world numbers of min and max speed and change values bellow
-    #these numbers are for "min_speed": 37.96875, "max_speed": 37.65517,
+    #these numbers are for "rpm_down": 37.96875, "rpm_up": 37.65517,
+    
+        
+        
     def set_sensitivity(self,lvl):
         if lvl == 0:#low - disabled
             self.sens_list_tresh = 9999999
@@ -95,6 +105,7 @@ class Motor:
         file=open("state.json","w")
         file.write(json.dumps({"current_encoder":self.counter}))
         self.sLock.release()
+    
     def rpm_updt(self):
         if self.current_counter != self.counter:
             self.current_counter = self.counter            
@@ -106,6 +117,7 @@ class Motor:
                 self.last_pulse=0
                 self.ietrations= 0
                 self.srt = utime.ticks_us()
+                
     def f_en(self,outA,outB):
         self.outA_current = outA.value()
         if self.outA_current != self.outA_last:
@@ -119,7 +131,34 @@ class Motor:
             self.counter -= 1
         self.outA_last = self.outA_current
         self.rpm_updt()
-        
+
+    def update_motor_status_based_on_rpm(self):
+        """Updates the motor's blocked status based on RPM thresholds."""
+        is_below_threshold = self.rpm + self.sens_tresh < min(self.rpm_up, self.rpm_down)
+        if is_below_threshold:
+            self.block_err_cnt += 1
+            if self.block_err_cnt >= self.sens_list_tresh:
+                self.stop_motor()
+                self.blocked = True
+        else:
+            self.block_err_cnt = 0  # Reset counter if RPM is above threshold
+
+    def update_collision_rpms(self, direction):
+        """Updates the RPMs during a collision based on the direction."""
+        current_rpm = self.rpm
+        if direction == 'up':
+            self.up_rpms = self.calculate_average_rpm(self.up_rpms, current_rpm)
+        elif direction == 'down':
+            self.down_rpms = self.calculate_average_rpm(self.down_rpms, current_rpm)
+
+    def calculate_average_rpm(self, previous_rpm, current_rpm):
+        """Calculates the average RPM based on previous and current RPM values."""
+        if previous_rpm == 0:
+            return current_rpm
+        else:
+            return (previous_rpm + current_rpm) / 2
+
+
     def encoder(self,outA,outB,collision=False):
         self.outA_current = outA.value()
         direction = None
@@ -132,22 +171,11 @@ class Motor:
                 direction = 'down'
         self.outA_last = self.outA_current
         self.rpm_updt()
-#                 if self.rpm+self.sens_tresh < self.max_speed or self.rpm+self.sens_tresh < self.min_speed:                    
-#                     if self.block_err_cnt >= self.sens_list_tresh:
-#                         self.stop_motor()
-#                         self.blocked = True
-#                     self.block_err_cnt += 1
-#                 if collision:                    
-#                     if direction == 'up':
-#                         if self.max_speeds == 0:
-#                             self.max_speeds = self.rpm
-#                         else:
-#                             self.max_speeds = (self.max_speeds+ self.rpm)/2
-#                     else:
-#                         if self.min_speeds == 0:
-#                             self.min_speeds = self.rpm
-#                         else:
-#                             self.min_speeds = (self.min_speeds+ self.rpm)/2
+        # Block detection and collision handling
+        self.update_motor_status_based_on_rpm()
+        if collision:
+            self.update_collision_rpms(direction)
+
         utime.sleep_us(1)
         
     def move_motor(self, button, up_button,outA, outB, mini ,maxi, collision=False):
@@ -160,8 +188,8 @@ class Motor:
             mini=-9999999
             maxi=9999999        
         self.block_err_cnt = 0
-        self.max_speeds = 0
-        self.min_speeds = 0
+        self.up_rpms = 0
+        self.down_rpms = 0
         while True:            
             if button.value() == 0:
                 if debounce_start == 0:
@@ -193,10 +221,10 @@ class Motor:
                 self.save_position()
                 debounce_start = 0
                 if collision:
-                    if self.max_speeds:
-                        self.max_speed = self.max_speeds
-                    if self.min_speeds:
-                        self.min_speed = self.min_speeds
+                    if self.up_rpms:
+                        self.rpm_up = self.up_rpms
+                    if self.down_rpms:
+                        self.rpm_down = self.down_rpms
                 break
             self.encoder(outA,outB,collision)
             

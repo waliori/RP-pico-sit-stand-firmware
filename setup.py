@@ -1,6 +1,6 @@
 from microdot_asyncio import Microdot, Response
-from machine import Pin, Timer, I2C, PWM
-import display, motor, wifi, calibration, menu, presets, buzz_vib, songs, accelerometer
+from machine import Pin, Timer, I2C, PWM, ADC
+import display, motor, wifi, calibration, menu, presets, buzz_vib, songs, accelerometer, acs712
 from rtttl import RTTTL
 import utime
 import os, sys
@@ -26,7 +26,20 @@ except:
     file=open("state.json","w")
     file.write(json.dumps({"current_encoder":0}))
     current_encoder = 0
-  
+
+#current sensor
+#TODO 2.29 for usb (dev) and 1.65 for pico (prod)
+# 66 for 30A, 100 for 25A and 185 for 5A sensor
+curr_sens = acs712.ACS712(adc_pin=28, sensitivity=66, aref=3.3, default_output_voltage=2.29, error=0.12)
+
+#collision detection
+# cd_i2c = I2C(1, scl=Pin(7), sda=Pin(6), freq=400000)
+# detector  = collision.CollisionDetector(cd_i2c)
+# print("initi collision detection")
+#accelerometer
+accelO = accelerometer.Accelerometer(sda=Pin(6),scl=Pin(7),freq=400000)
+print("initi accelerometer")
+
 #bridge for motor
 r_pwm_pin = 0
 l_pwm_pin = 1
@@ -39,8 +52,10 @@ pwm1.freq(16000)
 pwm1.duty_u16(duty)
 pwm2.freq(16000)
 pwm2.duty_u16(duty)
-motorO = motor.Motor(pwm1, pwm2,current_encoder,sLock)
+motorO = motor.Motor(pwm1, pwm2,current_encoder,sLock,accelO,curr_sens)
 motorO.stop_motor()
+print("initi motor")
+
 
 app = Microdot()
 
@@ -63,16 +78,17 @@ outA = Pin(20, mode=Pin.IN) # Pin CLK of encoder 2 #sda
 outB = Pin(21, mode=Pin.IN) # Pin DT of encoder 2 #scl
 
 #buzzer + vibrator
-buzzer = PWM(Pin(28))
+buzzer = PWM(Pin(22))
 volume=1000
 vibrat = Pin(16, Pin.OUT)
 
 buzzvibO = buzz_vib.Buzzer(buzzer, vibrat, volume, sLock)
 print("initi buzzvibO")
 
-#accelerometer
-accelO = accelerometer.Accelerometer(sda=Pin(6),scl=Pin(7),freq=400000)
-print("initi accelerometer")
+
+
+
+
 
 # oled display init
 sLock.acquire()

@@ -33,7 +33,7 @@ class Accelerometer:
     def __init__(self, sda, scl, freq, collision_threshold=2, obstacle_threshold_factor=1.5, debounce_count=1):
         # Initialize I2C
         self.i2c = I2C(1, sda=sda, scl=scl, freq=freq)
-        
+
         # Initialize ADXL345
         self.i2c.writeto_mem(self.ADXL345_ADDRESS, self.ADXL345_POWER_CTL, bytearray([0x08]))  # Measurement mode
         self.i2c.writeto_mem(self.ADXL345_ADDRESS, self.ADXL345_DATA_FORMAT, bytearray([0x0B]))  # Full resolution, +/- 16g
@@ -42,12 +42,12 @@ class Accelerometer:
         self.COLLISION_THRESHOLD = collision_threshold
         self.OBSTACLE_THRESHOLD_FACTOR = obstacle_threshold_factor
         self.DEBOUNCE_COUNT = debounce_count
-        
+
         # Initialize filters
         self.x_filter = SMAFilter(5)
         self.y_filter = SMAFilter(5)
         self.z_filter = SMAFilter(5)
-        
+
         # Store the last readings for comparison
         self.last_x, self.last_y, self.last_z = self.read_accel_data()
         self.collision_count = 0
@@ -67,14 +67,14 @@ class Accelerometer:
     def detect_change(self, x, y, z):
         # Using dynamic threshold based on standard deviation
         std_x, std_y, std_z = self.x_filter.get_std(), self.y_filter.get_std(), self.z_filter.get_std()
-        
+
         # In case std_x, std_y, or std_z is None, set a default value
         std_x = std_x if std_x is not None else 1
         std_y = std_y if std_y is not None else 1
         std_z = std_z if std_z is not None else 1
 
         dynamic_threshold = self.OBSTACLE_THRESHOLD_FACTOR * max(std_x, std_y, std_z)
-        
+
         x = self.low_pass_filter(x, self.last_x)
         y = self.low_pass_filter(y, self.last_y)
         z = self.low_pass_filter(z, self.last_z)
@@ -106,12 +106,10 @@ class Accelerometer:
 
     def show_accel(self):
         x, y, z = self.read_accel_data()
-        print(f"X: {x}, Y: {y}, Z: {z}")        
-        if self.debounce_detection(self.detect_collision, x, y, z, 'collision_count'):
-            print("Collision detected!")
-        if self.debounce_detection(self.detect_change, x, y, z, 'obstacle_count'):
-            print("Obstacle detected!")
+        #print(f"X: {x}, Y: {y}, Z: {z}")        
+#         if self.debounce_detection(self.detect_collision, x, y, z, 'collision_count'):
+#             print("Collision detected!")
+#         if self.debounce_detection(self.detect_change, x, y, z, 'obstacle_count'):
+#             print("Obstacle detected!")
 
         self.last_x, self.last_y, self.last_z = x, y, z
-
-# accelerometer
