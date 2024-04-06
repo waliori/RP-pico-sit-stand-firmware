@@ -1205,7 +1205,7 @@ def task_display_navigation():
                     pb_one.long_func(set_preset, ('1',))
                     pb_two.long_func(set_preset, ('2',))
                     pb_three.long_func(set_preset, ('3',))
-                    if time() - start_tm_rem >= calibrationO.reminder_time:
+                    if time() - start_tm_rem >= calibrationO.reminder_time and calibrationO.reminder_time < 86401:
                         displayO.alarm()
                     if time() - start_tm >= calibrationO.sleep_time:
                         displayO.dim()
