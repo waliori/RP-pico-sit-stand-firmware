@@ -3,32 +3,15 @@ import json
 import utime
 import math
 import sys
-"""
-Functions:
 
-    semi_calibrate() -> set_max_enc()
-    real_semi_calibrate(real_heigh) -> save_max_real(real_heigh)
-    calibrate() -> set_min_enc()
-    real_calibrate(real_heigh) -> set_min_real(real_heigh)
-
-Flags:
-
-    idle_state -> system_idle
-    calibrated -> enc_calib
-    real_calibrated -> real_calib
-    semi_calibrated -> max_enc_set
-    real_semi_calibrated -> max_real_set
-    speed_calibrated -> speed_calib
-
-"""
 class Calibration:
     def __init__(self,displayO,motorO,sLock,wifi,aps):
-        self.idle_state = False
-        self.calibrated = False
-        self.real_calibrated = False
-        self.semi_calibrated = False
-        self.real_semi_calibrated = False
-        self.speed_calibrated = False
+        self.system_idle = False
+        self.enc_calib = False
+        self.real_calib = False
+        self.max_enc_set = False
+        self.max_real_set = False
+        self.speed_calib = False
         self.displayO = displayO
         self.motorO = motorO
         self.wifi = wifi
@@ -41,11 +24,13 @@ class Calibration:
         self._01 = False
         self._10 = False
         self._100 = False
-        self.semi_collision_state = False
-#         self.height_value = 0
-#         self.height_previousValue = 1
-#         self.min_height = 0
-#         print(self.wifi)
+        self.collision_reset_state = False
+        self.curr_up = 0
+        self.curr_down = 0
+        self.rpm_down = 0
+        self.rpm_up = 0
+        self.accel_up = (0,0,0)
+        self.accel_down = (0,0,0)
         try:    
             settings = open("settings.json","r")
             settings_json = json.loads(settings.read())
@@ -54,25 +39,29 @@ class Calibration:
             self.min_encoder = settings_json["min_encoder"]
             self.max_real = settings_json["max_real"]
             self.min_real = settings_json["min_real"]
-            self.motorO.rpm_up = settings_json["rpm_up"]
-            self.motorO.rpm_down = settings_json["rpm_down"]
+            self.rpm_up = settings_json["rpm_up"]
+            self.rpm_down = settings_json["rpm_down"]
+            self.curr_down = settings_json["current_down"] 
+            self.curr_up = settings_json["current_up"]
+            self.accel_up = settings_json["accel_up"] 
+            self.accel_down = settings_json["accel_down"] 
             self.sleep_time = settings_json["sleep_time"]
             self.reminder_time = settings_json["reminder_time"]
             if settings_json["sleep_time"] > 86400:
                 self.sleep_time = 86401
             if settings_json["reminder_time"] > 86400:
-                self.reminder_time = 86401
-            self.idle_state = True
-            self.semi_calibrated = True
-            self.real_semi_calibrated = True        
-            self.calibrated = True
-            self.real_calibrated = True
-            self.speed_calibrated = True
+                self.reminder_time = 86401 #TODO change this causing alarm to go on after 24h
+            self.system_idle = True
+            self.max_enc_set = True
+            self.max_real_set = True        
+            self.enc_calib = True
+            self.real_calib = True
+            self.speed_calib = True
             self.displayO.oled.fill(0)
             self.displayO.show_header("Home",self.wifi,self.aps)
             self.displayO.show_frame()
         except:
-            self.idle_state = False
+            self.system_idle = False
             self.sLock.acquire()
             file=open("settings.json","w")
             self.sleep_time = 30
@@ -106,32 +95,35 @@ class Calibration:
         if isinstance(value,float):
             return round(value,1)
         return value
-    def semi_calibrate(self):
-        self.semi_calibrated = True
-#         print(str(self.motorO.counter))
+    
+    def set_max_enc(self):
+        self.max_enc_set = True
         self.max_encoder = self.motorO.counter
+        self.curr_up = self.motorO.current_threshold
+        self.rpm_up = self.motorO.avg_rpm
+        self.accel_up = self.motorO.avg_xyz
         self.displayO.clear_frame()
         self.displayO.text_frame("Turn KNOB to set your table's highest height")
     
-    def real_semi_calibrate(self,real_heigh):
-        self.real_semi_calibrated = True
-#         print(str(real_heigh))
+    def set_max_real(self,real_heigh):
+        self.max_real_set = True
         self.max_real = real_heigh
         self.displayO.clear_frame()
         self.displayO.text_frame("Go to LOWEST position (DOWN), to confirm long clik (KNOB)")
     
-    def calibrate(self):
-        self.calibrated = True
-#         print(str(self.motorO.counter))
+    def set_min_enc(self):
+        self.enc_calib = True
         self.min_encoder = self.motorO.counter
+        self.curr_down = self.motorO.current_threshold
+        self.rpm_down = self.motorO.avg_rpm
+        self.accel_down = self.motorO.avg_xyz
         self.displayO.clear_frame()
         self.displayO.text_frame("Turn KNOB to set your table's lowest height")
     
-    def real_calibrate(self,real_heigh):
-        self.real_calibrated = True
-        self.idle_state = True
-        self.speed_calibrated = True
-#         print(str(real_heigh))
+    def set_min_real(self,real_heigh):
+        self.real_calib = True
+        self.system_idle = True
+        self.speed_calib = True
         self.min_real = real_heigh        
         self.sLock.acquire()
         settings = open("settings.json","r")
@@ -140,8 +132,12 @@ class Calibration:
         settings_json["max_encoder"] = self.max_encoder
         settings_json["min_real"] = self.min_real
         settings_json["max_real"] = self.max_real
-        settings_json["rpm_down"] = self.motorO.rpm_down
-        settings_json["rpm_up"] = self.motorO.rpm_up
+        settings_json["rpm_down"] = self.rpm_down
+        settings_json["rpm_up"] = self.rpm_up
+        settings_json["current_down"] = self.curr_down
+        settings_json["current_up"] = self.curr_up
+        settings_json["accel_down"] = self.accel_down
+        settings_json["accel_up"] = self.accel_up
         file=open("settings.json","w")
         file.write(json.dumps(settings_json))
         self.displayO.clear_frame()
@@ -153,15 +149,14 @@ class Calibration:
         self.displayO.show_height_frame(str(self.real_height(self.motorO.counter)),0)
         self.sLock.release()
     
-    def collision_semi_calibrate(self):
-        self.semi_collision_state = False
+    def reset_collision(self):#TODO to review all the logic of up and down
+        self.collision_reset_state = False
         self.sLock.acquire()
         settings = open("settings.json","r")
         settings_json = json.loads(settings.read())
-        settings_json["rpm_down"] = self.motorO.rpm_down
-        settings_json["rpm_up"] = self.motorO.rpm_up
+        settings_json["rpm_down"] = self.rpm_down
+        settings_json["rpm_up"] = self.rpm_up
         settings.close()
-        print(self.motorO.rpm_down,self.motorO.rpm_up)
         file=open("settings.json","w")
         file.write(json.dumps(settings_json))
         file.close()
@@ -171,14 +166,9 @@ class Calibration:
         utime.sleep(1)
         self.displayO.oled.fill(0)
         self.displayO.show_header("Home",self.wifi,self.aps)
-#         self.displayO.show_height_frame(str(self.real_height(self.motorO.counter),0))
         self.sLock.release()
-        self.idle_state = True
+        self.system_idle = True
         
-#     def collision_calibrate(self):
-#              
-#         self.collision_state = False
-#         self.idle_state = True
     
     def set_min(self,real_min):
         self.sLock.acquire()

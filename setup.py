@@ -31,7 +31,7 @@ except:
 #TODO 2.29 for usb (dev) and 1.65 for pico (prod)
 # 66 for 30A, 100 for 25A and 185 for 5A sensor
 curr_sens = acs712.ACS712(adc_pin=28, sensitivity=66, aref=3.3, default_output_voltage=2.29, error=0.12)
-
+print("initi current ")
 #collision detection
 # cd_i2c = I2C(1, scl=Pin(7), sda=Pin(6), freq=400000)
 # detector  = collision.CollisionDetector(cd_i2c)
