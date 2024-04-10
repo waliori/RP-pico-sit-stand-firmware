@@ -72,8 +72,7 @@ class Calibration:
             self.displayO.oled.fill(0)
             self.displayO.show_header("Calibration",self.wifi,self.aps)
             self.displayO.show_frame()
-            self.displayO.text_frame("Go to HIGHEST position (UP), to confirm long clik (KNOB)")
-            
+            self.displayO.text_frame("Go to HIGHEST position (UP), to confirm long clik (KNOB)")            
             
     def real_height(self,current_encoder):
         value = (current_encoder - self.min_encoder)* (self.max_real - self.min_real) / (self.max_encoder - self.min_encoder) + self.min_real
@@ -96,12 +95,20 @@ class Calibration:
             return round(value,1)
         return value
     
+    def set_avg_vals(self,direction):
+        if direction == "up":
+            self.curr_up = self.motorO.current_threshold
+            self.rpm_up = self.motorO.avg_rpm
+            self.accel_up = self.motorO.avg_xyz
+        else:
+            self.curr_down = self.motorO.current_threshold
+            self.rpm_down = self.motorO.avg_rpm
+            self.accel_down = self.motorO.avg_xyz
+    
     def set_max_enc(self):
         self.max_enc_set = True
         self.max_encoder = self.motorO.counter
-        self.curr_up = self.motorO.current_threshold
-        self.rpm_up = self.motorO.avg_rpm
-        self.accel_up = self.motorO.avg_xyz
+        self.set_avg_vals("up")
         self.displayO.clear_frame()
         self.displayO.text_frame("Turn KNOB to set your table's highest height")
     
@@ -114,9 +121,7 @@ class Calibration:
     def set_min_enc(self):
         self.enc_calib = True
         self.min_encoder = self.motorO.counter
-        self.curr_down = self.motorO.current_threshold
-        self.rpm_down = self.motorO.avg_rpm
-        self.accel_down = self.motorO.avg_xyz
+        self.set_avg_vals("down")
         self.displayO.clear_frame()
         self.displayO.text_frame("Turn KNOB to set your table's lowest height")
     
@@ -150,12 +155,17 @@ class Calibration:
         self.sLock.release()
     
     def reset_collision(self):#TODO to review all the logic of up and down
+        #TODO add another stpe to the calibration reset (up then down and not only up+down)
         self.collision_reset_state = False
         self.sLock.acquire()
         settings = open("settings.json","r")
         settings_json = json.loads(settings.read())
         settings_json["rpm_down"] = self.rpm_down
         settings_json["rpm_up"] = self.rpm_up
+        settings_json["current_down"] = self.curr_down
+        settings_json["current_up"] = self.curr_up
+        settings_json["accel_down"] = self.accel_down
+        settings_json["accel_up"] = self.accel_up
         settings.close()
         file=open("settings.json","w")
         file.write(json.dumps(settings_json))

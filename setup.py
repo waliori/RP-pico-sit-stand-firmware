@@ -1,6 +1,6 @@
 from microdot_asyncio import Microdot, Response
 from machine import Pin, Timer, I2C, PWM, ADC
-import display, motor, wifi, calibration, menu, presets, buzz_vib, songs, accelerometer, acs712
+import display, motor, wifi, calibration, menu, presets, buzz_vib, songs, accelerometer, acs712, dev.collision as collision
 from rtttl import RTTTL
 import utime
 import os, sys
@@ -57,6 +57,7 @@ motorO.stop_motor()
 print("initi motor")
 
 
+
 app = Microdot()
 
 
@@ -101,6 +102,8 @@ wifiO = wifi.Wifi(app,sLock,displayO,menuO)
 print("initi wifiO")
 calibrationO = calibration.Calibration(displayO,motorO,sLock,wifiO.wifi,wifiO.aps)
 print("initi calibrationO")
+collisionO = collision.Collision(motorO,calibrationO)
+print("initi collisionO")
 displayO.reminder_time = calibrationO.reminder_time
 displayO.start_time = utime.ticks_ms()
 presetsO = presets.Presets(motorO,calibrationO,sLock)

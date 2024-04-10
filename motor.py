@@ -43,6 +43,7 @@ class Motor:
         self.avg_xyz = (0,0,0)
         self.xyz_running_sum = (0, 0, 0)
         self.xyz_reading_count = 0
+        self.collision_count = 0
         
     def move_motor_forward(self,outA,outB,maxi):
         for duty in range(0,65025,5):
@@ -136,7 +137,7 @@ class Motor:
                 
                 
                 
-    def f_en(self,outA):#TODO remove outB and in b_en()
+    def f_en(self,outA):
         self.outA_current = outA.value()
         if self.outA_current != self.outA_last:
             self.counter += 1
@@ -183,6 +184,8 @@ class Motor:
         self.current_readings = []
         while True:            
             if button.value() == 0:
+                if self.blocked:
+                    self.stop_motor()
                 if debounce_start == 0:
                     debounce_start = utime.ticks_us()
                 elif utime.ticks_diff(utime.ticks_us(), debounce_start) > debounce_duration:
@@ -200,7 +203,9 @@ class Motor:
                             self.direction = -1
                     debounce_start = 0
             if button.value() != 0:
-                if self.counter >= (mini + 30) and self.counter <= (maxi -30):
+                if self.blocked:
+                    self.stop_motor()
+                if (self.counter >= (mini + 30) and self.counter <= (maxi -30)) and not self.blocked:
                     if button == up_button:
                         self.slow_motor_forward(outA,outB,maxi -30)
                     else:
