@@ -1,3 +1,5 @@
+# from machine import WDT
+
 from setup import *
 import _thread
 from abutton import Pushbutton
@@ -7,6 +9,8 @@ import machine
 # import math
 print("==============")
 print("imports done")
+
+# wdt = WDT(timeout=8388)  # enable it with a timeout of 2s
 # Motor Section
 #TODO modifier go height to calculate current height + wanted height < max
 #TODO add acceleration + position to know if impact        
@@ -787,24 +791,17 @@ def task_display_navigation():
     rem_previousValue = calibrationO.reminder_time+1    
 #     x=True
     while True:
+        
         sLock.acquire()
-#         if motorO.is_moving():
-#             #motorO.blocked = True
-#             if motorO.direction == 1:
-#                 print(f"rpm: {motorO.avg_rpm < calibrationO.rpm_up}, avg:{motorO.avg_rpm}, tresh:{calibrationO.rpm_up}")
-#                 print(f"current: {motorO.current_threshold > calibrationO.curr_up}, avg:{motorO.current_threshold}, tresh:{calibrationO.curr_up}")
-#                 print("---------------------------")
-#                 print
-#             else:
-#                 print(f"x:{motorO.avg_xyz[0]}, y:{motorO.avg_xyz[1]}, z:{motorO.avg_xyz[2]}")
-#                 print(f"x:{calibrationO.accel_up[0]}, y:{calibrationO.accel_up[1]}, z:{calibrationO.accel_up[2]}")
-#                 print("---------------------------")
 
         # not calibrated and not semi calibrated and not idle (AKA first boot of the system)
         if not calibrationO.enc_calib and not calibrationO.max_enc_set and not calibrationO.system_idle and not calibrationO.speed_calib:
+            if motorO.is_moving():                
+                motorO.update_pca()
             pb_up.press_func(move_motor, (up_button,True))
-            pb_down.press_func(move_motor, (down_button,True))#TODO mayber remove ability to go down
-            pb_switch.release_func(calibrationO.set_max_enc, ())
+            pb_down.press_func(move_motor, (down_button,True))#TODO mayber remove ability to go down            
+            pb_switch.release_func(calibrationO.set_max_enc, ())            
+#             motorO.update_pca()
         # not calibrated but semi calibrated and not idle (highest point set) 
         elif not calibrationO.enc_calib and  calibrationO.max_enc_set and not calibrationO.system_idle and not calibrationO.speed_calib:
             # not real semi calibrated ()
@@ -842,9 +839,12 @@ def task_display_navigation():
             # real semi calibrated done
             # TODO verify if else works
             elif calibrationO.max_real_set:
+                if motorO.is_moving():
+                    motorO.update_pca()
                 pb_up.press_func(move_motor, (up_button,True))
                 pb_down.press_func(move_motor, (down_button,True))
                 pb_switch.release_func(calibrationO.set_min_enc, ())
+                #motorO.update_pca()
         # if calibrated and max_enc_set and not idle (Highest point Done, starting lower)
         elif calibrationO.enc_calib and  calibrationO.max_enc_set and not calibrationO.system_idle and not calibrationO.speed_calib:
             # calibrated but not real calibrated 
@@ -879,7 +879,33 @@ def task_display_navigation():
                         displayO.show_header("Setup",wifiO.wifi,wifiO.aps)
                         displayO.show_height_frame(str(round(height_value,1)),0)
                     height_previousValue = step_pin.value()
-                    utime.sleep_ms(1)    
+                    utime.sleep_ms(1)
+                    
+        if motorO.is_moving() and not motorO.slowing:
+            print(f"{collisionO.detect_obstacle(motorO.direction,[motorO.avg_xyz[0],motorO.avg_xyz[1],motorO.avg_xyz[2],motorO.avg_rpm,motorO.current_threshold])}")
+#             print(f"{motorO.avg_xyz}")
+#             sensor_data = [motorO.avg_xyz[0],motorO.avg_xyz[1],motorO.avg_xyz[2],motorO.avg_rpm,motorO.current_threshold]
+#             direction = motorO.direction
+#             print(f"{motorO.direction}")
+#             print(f"{[motorO.avg_xyz[0],motorO.avg_xyz[1],motorO.avg_xyz[2],motorO.avg_rpm,motorO.current_threshold]}")
+#             if collisionO.detect_obstacle(motorO.direction,[motorO.avg_xyz[0],motorO.avg_xyz[1],motorO.avg_xyz[2],motorO.avg_rpm,motorO.current_threshold]):
+#                 print("collision")
+#             else:
+#                 print("ok")
+#                 print(f" x,y,z,rpm, current:  {[motorO.avg_xyz[0],motorO.avg_xyz[1],motorO.avg_xyz[2],motorO.avg_rpm,motorO.current_threshold]}")
+            #print(f"{motorO.projected_mean_down}, {motorO.projected_mean_up}")
+            #motorO.blocked = True
+            #if motorO.direction == 1:
+#                 print(f"rpm: {motorO.avg_rpm < calibrationO.rpm_up}, avg:{motorO.avg_rpm}, tresh:{calibrationO.rpm_up}")
+#                 print(f"current: {motorO.current_threshold > calibrationO.curr_up}, avg:{motorO.current_threshold}, tresh:{calibrationO.curr_up}")
+            #   print("---------------------------")
+#             elif motorO.direction == -1:
+#                 print(f"x_sens:{motorO.avg_xyz[0]}, y_sens:{motorO.avg_xyz[1]}, z_sens:{motorO.avg_xyz[2]}")
+#                 print(f"x_tresh:{calibrationO.accel_down[0]}, y_tresh:{calibrationO.accel_down[1]}, z_tresh:{calibrationO.accel_down[2]}")
+#                 print(f"rpm_sens:{motorO.avg_rpm}, rpm_tresh:{calibrationO.rpm_down}")
+#                 print(f"current_sens:{motorO.current_threshold}, current_tresh:{calibrationO.curr_down}")
+#                 print("---------------------------")
+
         if menuO.menu_state and not calibrationO.system_idle and not motorO.api and calibrationO.speed_calib:
             menuO.move_exec_menu_encoder(step_pin,direction_pin,menu_list,"Menu",wifiO.wifi,wifiO.aps)                                  
             pb_up.press_func(handle_button, (menuO.move_menu_buttons,("up",menu_list,"Menu",wifiO.wifi,wifiO.aps,)))
@@ -928,6 +954,8 @@ def task_display_navigation():
             elif motorO.direction == 0:
                 pb_up.press_func(move_motor, (up_button,True))
                 pb_down.press_func(move_motor, (down_button,True))
+            if motorO.is_moving():
+                motorO.update_pca()
             pb_switch.release_func(calibrationO.reset_collision, ())
             pb_switch.long_func(disable_button, ())
             pb_one.release_func(disable_button, ())
@@ -1252,6 +1280,8 @@ def task_display_navigation():
                     pb_one.release_func(disable_button, ())
                     pb_two.release_func(disable_button, ())
                     pb_three.release_func(disable_button, ())
+        
+        utime.sleep_ms(10)
         sLock.release()
         
 
@@ -1516,7 +1546,7 @@ except KeyboardInterrupt:
 
 
 
-
+# wdt.feed()
 
 
 

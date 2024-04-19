@@ -1,6 +1,6 @@
 from microdot_asyncio import Microdot, Response
 from machine import Pin, Timer, I2C, PWM, ADC
-import display, motor, wifi, calibration, menu, presets, buzz_vib, songs, accelerometer, acs712, dev.collision as collision
+import display, motor, wifi, calibration, menu, presets, buzz_vib, songs, accelerometer, acs712, collision
 from rtttl import RTTTL
 import utime
 import os, sys
@@ -17,15 +17,7 @@ print(sys.implementation[0], os.uname()[3],
       "\nrun on", os.uname()[4])
 print("====================================")
 
-try:    
-    state = open("state.json","r")
-    state_json = json.loads(state.read())
-    current_encoder = state_json["current_encoder"]
-#     print(current_encoder)
-except:
-    file=open("state.json","w")
-    file.write(json.dumps({"current_encoder":0}))
-    current_encoder = 0
+
 
 #current sensor
 #TODO 2.29 for usb (dev) and 1.65 for pico (prod)
@@ -46,7 +38,31 @@ l_pwm_pin = 1
 pwm1 = PWM(Pin(r_pwm_pin, Pin.OUT)) #R_PWM SDA
 pwm2 = PWM(Pin(l_pwm_pin, Pin.OUT)) #L_PWM SCL
 
+def check_settings():
+    try:
+        with open("settings.json", "r") as file:
+            settings = json.load(file)
+        required_params = [
+            "rpm_up", "reminder_time", "min_real", "current_down", "sleep_time",
+            "max_real", "accel_down", "rpm_down", "min_encoder", "accel_up",
+            "max_encoder", "current_up", "principal_components_up", "principal_components_down",
+            "projected_mean_up", "projected_mean_down"
+        ]
+        return all(param in settings for param in required_params)
+    except:
+        return False
 
+try:    
+    state = open("state.json","r")
+    state_json = json.loads(state.read())
+    current_encoder = state_json["current_encoder"]
+    state.close()
+except:
+    if check_settings():
+        file=open("state.json","w")
+        file.write(json.dumps({"current_encoder":0}))        
+        file.close()
+    current_encoder = 0
 duty = 0
 pwm1.freq(16000)
 pwm1.duty_u16(duty)
@@ -102,8 +118,9 @@ wifiO = wifi.Wifi(app,sLock,displayO,menuO)
 print("initi wifiO")
 calibrationO = calibration.Calibration(displayO,motorO,sLock,wifiO.wifi,wifiO.aps)
 print("initi calibrationO")
-collisionO = collision.Collision(motorO,calibrationO)
+collisionO = collision.Collision(calibrationO)
 print("initi collisionO")
+motorO.get_calib()
 displayO.reminder_time = calibrationO.reminder_time
 displayO.start_time = utime.ticks_ms()
 presetsO = presets.Presets(motorO,calibrationO,sLock)

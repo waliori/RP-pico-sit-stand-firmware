@@ -1,21 +1,21 @@
 import utime
 import json
 import uasyncio as asyncio
-
+import uarray
+import umatrix
 class Motor:
     def __init__(self, pwm1, pwm2, counter,sLock,accelO,curr_sens):
+        self.api = False
+        self.direction = 0 # 0 for stopped, 1 for clockwise, -1 for counterclockwise
         self.pwm1 = pwm1
         self.pwm2 = pwm2
         self.counter = counter   # counter updates when encoder rotates
         self.last_counter = 0
         self.outA_last = 0 # registers the last state of outA pin / CLK pin
         self.outA_current = 0 # registers the current state of outA pin / CLK pin
-        self.direction = 0 # 0 for stopped, 1 for clockwise, -1 for counterclockwise
         self.sLock = sLock
         self.curren_position = counter
-        self.api = False
-        self.rpm_up = 0
-        self.rpm_down = 0
+        self.settings_valid = self.check_settings()
         self.sens_list_tresh = 9999999
         self.sens_tresh = 0
         self.block_err_cnt = 0
@@ -25,6 +25,7 @@ class Motor:
         self.srt = 0
         self.statesrota = 20 #encoder
         self.blocked = False
+        self.slowing = False
         self.rpm = 0
         self.avg_rpm=0
         self.rpm_running_sum = 0
@@ -43,7 +44,24 @@ class Motor:
         self.avg_xyz = (0,0,0)
         self.xyz_running_sum = (0, 0, 0)
         self.xyz_reading_count = 0
-        self.collision_count = 0
+        # Initialize PCA variables
+        self.min_samples = 100
+        self.num_samples = 0
+        self.mean = None
+        self.covariance_matrix = None
+        self.principal_components_up = None
+        self.projected_mean_up = None
+        self.principal_components_down = None
+        self.projected_mean_down = None
+        
+    def get_calib(self):
+        try:
+            with open("settings.json","r") as settings:
+                self.calibration_data = json.load(settings)
+        except:
+            self.calibration_data = {}
+        print(f"{self.calibration_data}")
+        
         
     def move_motor_forward(self,outA,outB,maxi):
         for duty in range(0,65025,5):
@@ -55,6 +73,7 @@ class Motor:
 #             utime.sleep_us(1)
     
     def slow_motor_forward(self,outA,outB,maxi):
+        self.slowing = True
         for duty in range(65025, 0, -5):
             if self.counter >= (maxi - 15):
                 self.stop_motor()
@@ -62,10 +81,11 @@ class Motor:
             self.pwm1.duty_u16(duty)
             self.f_en(outA)
         self.rpm = 0
+        self.slowing = False
 #             utime.sleep_us(1)
 
     def is_moving(self):
-        return self.direction != 0
+        return self.direction != 0 and self.rpm != 0
             
     def move_motor_backward(self,outA,outB,mini):
         for duty in range(0,65025,5):
@@ -77,6 +97,7 @@ class Motor:
 #             utime.sleep_us(1)
         
     def slow_motor_backward(self,outA,outB,mini):
+        self.slowing = True
         for duty in range(65025, 0, -5):
             if self.counter <= (mini):
                 self.stop_motor()
@@ -84,6 +105,7 @@ class Motor:
             self.pwm2.duty_u16(duty)
             self.b_en(outA)
         self.rpm = 0
+        self.slowing = False
 #             utime.sleep_us(1)
         
     def stop_motor(self):
@@ -91,13 +113,125 @@ class Motor:
         self.pwm2.duty_u16(0)
         self.rpm = 0
         
+    def check_settings(self):
+        try:
+            with open("settings.json", "r") as file:
+                settings = json.load(file)
+            required_params = [
+                "rpm_up", "reminder_time", "min_real", "current_down", "sleep_time",
+                "max_real", "accel_down", "rpm_down", "min_encoder", "accel_up",
+                "max_encoder", "current_up", "principal_components_up", "principal_components_down",
+                "projected_mean_up", "projected_mean_down"
+            ]
+            return all(param in settings for param in required_params)
+        except:
+            return False
+    
     def save_position(self):
-        self.sLock.acquire()
-        self.curren_position = self.counter
-        file=open("state.json","w")
-        file.write(json.dumps({"current_encoder":self.counter}))
-        self.sLock.release()
-        
+        if self.settings_valid:
+            self.sLock.acquire()
+            self.curren_position = self.counter
+            file=open("state.json","w")
+            file.write(json.dumps({"current_encoder":self.counter}))
+            file.close()
+            self.sLock.release()
+
+    def update_pca(self):
+        if self.calibration_data:
+            # Convert averaged sensor data to a list
+            sensor_data = [self.avg_xyz[0], self.avg_xyz[1], self.avg_xyz[2], self.avg_rpm, self.avg_current]
+            # Normalize the sensor data
+            normalized_data = self.normalize_data(sensor_data)
+            # Update mean
+            if self.num_samples == 0:
+                self.mean = normalized_data.copy()
+            else:
+                for i in range(len(self.mean)):
+                    self.mean[i] = (self.num_samples * self.mean[i] + normalized_data[i]) / (self.num_samples + 1)
+
+            # Update covariance matrix
+            if self.num_samples == 0:
+                self.covariance_matrix = [[0] * 5 for _ in range(5)]
+            else:
+                centered_data = [normalized_data[i] - self.mean[i] for i in range(len(normalized_data))]
+                for i in range(5):
+                    for j in range(i, 5):
+                        self.covariance_matrix[i][j] += centered_data[i] * centered_data[j]
+                        self.covariance_matrix[j][i] = self.covariance_matrix[i][j]
+
+            self.num_samples += 1
+            if self.num_samples <= self.min_samples:
+                # Compute eigenvalues and eigenvectors
+                eigenvalues, eigenvectors = self.compute_eigen(self.covariance_matrix)
+
+                # Sort eigenvectors by decreasing eigenvalues
+                sorted_indices = sorted(range(len(eigenvalues)), key=lambda i: eigenvalues[i], reverse=True)
+                sorted_eigenvalues = [eigenvalues[i] for i in sorted_indices]
+                sorted_eigenvectors = [[eigenvectors[j][i] for j in range(5)] for i in sorted_indices]
+
+                # Select principal components
+                num_components = 2  # Number of principal components to retain
+                principal_components = [sorted_eigenvectors[i] for i in range(num_components)]
+
+                # Project data onto principal components
+                projected_mean = [sum(self.mean[j] * principal_components[i][j] for j in range(5)) for i in range(num_components)]
+                # Store principal components and projected mean based on direction
+                if self.rpm != 0:                
+                    print(f"{principal_components}, {projected_mean}, {self.direction}")
+                    if self.direction == -1:  # Going down
+                        self.principal_components_down = principal_components
+                        self.projected_mean_down = projected_mean
+                    elif self.direction == 1:  # Going up
+                        self.principal_components_up = principal_components
+                        self.projected_mean_up = projected_mean
+            
+    def compute_eigen(self, matrix):
+        n = len(matrix)
+        eigenvalues = [0] * n
+        eigenvectors = [[0] * n for _ in range(n)]
+
+        for i in range(n):
+            max_val = 0
+            max_idx = -1
+            for j in range(n):
+                if abs(matrix[i][j]) > max_val:
+                    max_val = abs(matrix[i][j])
+                    max_idx = j
+
+            for j in range(n):
+                eigenvectors[j][i] = matrix[j][max_idx]
+
+            eigenvalues[i] = eigenvectors[i][i]
+            if eigenvalues[i] != 0:
+                for j in range(n):
+                    eigenvectors[i][j] /= eigenvalues[i]
+
+        return eigenvalues, eigenvectors
+    
+    def normalize_data(self, data):
+        # Extract acceleration, RPM, and current values from the data
+        accel_x, accel_y, accel_z, rpm, current = data
+
+        # Normalize acceleration values
+        min_accel = self.calibration_data["accel_down"]
+        max_accel = self.calibration_data["accel_up"]
+        normalized_accel_x = (accel_x - min_accel[0]) / (max_accel[0] - min_accel[0])
+        normalized_accel_y = (accel_y - min_accel[1]) / (max_accel[1] - min_accel[1])
+        normalized_accel_z = (accel_z - min_accel[2]) / (max_accel[2] - min_accel[2])
+
+        # Normalize RPM values
+        min_rpm = self.calibration_data["rpm_down"]
+        max_rpm = self.calibration_data["rpm_up"]
+        normalized_rpm = (rpm - min_rpm) / (max_rpm - min_rpm)
+
+        # Normalize current values
+        min_current = self.calibration_data["current_down"]
+        max_current = self.calibration_data["current_up"]
+        normalized_current = (current - min_current) / (max_current - min_current)
+
+        # Return the normalized data as a list
+        return [normalized_accel_x, normalized_accel_y, normalized_accel_z, normalized_rpm, normalized_current]
+    
     def set_curr_tresh(self):            
         current = self.curr
         self.running_sum += current
