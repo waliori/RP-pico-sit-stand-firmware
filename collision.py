@@ -1,109 +1,78 @@
-from mpu9250 import MPU9250
-import utime
-import math
+class Collision:
+    def __init__(self, calibrationO):
+        self.calibration_data = calibrationO.calib
+        self.distance_window_up = []
+        self.distance_window_down = []
+        self.window_size = 10
+        self.sensitivity_up = 8.0  # Sensitivity for upward movement
+        self.sensitivity_down = 10.0  # Sensitivity for downward movement
 
-# Assuming MPU9250, MPU6500, and AK8963 classes are defined elsewhere
+    def detect_obstacle(self, direction, sensor_data):
+        # Normalize the sensor data
+        normalized_data = self.normalize_data(sensor_data)
 
-class CollisionDetector:
-    def __init__(self, i2c, soft_threshold=9.43800118535422, hard_threshold=9.737911225701378, gyro_threshold=0.2808514652826003, window_size=20, debounce_count=6):
-        self.mpu9250 = MPU9250(i2c)
-        self.soft_threshold = soft_threshold
-        self.hard_threshold = hard_threshold
-        self.gyro_threshold = gyro_threshold
-        self.window_size = window_size
-        self.debounce_count = debounce_count  # New attribute for debounce mechanism
-        self.accel_window = []
-        self.gyro_window = []
-        self.collision_count = {'soft': 0, 'hard': 0, 'rotation': 0}  # Track consecutive collisions
-        self.operational_noise_buffer = 0.0
-        self.operational_gyro_noise_buffer = 0.0
-        self.calculate_operational_noise_buffer()
+        # Set the calibration data and distance window based on the direction
+        if direction == 1:  # Going up
+            principal_components = self.calibration_data["principal_components_up"]
+            projected_mean = self.calibration_data["projected_mean_up"]
+            distance_window = self.distance_window_up
+            sensitivity = self.sensitivity_up
+        else:  # Going down
+            principal_components = self.calibration_data["principal_components_down"]
+            projected_mean = self.calibration_data["projected_mean_down"]
+            distance_window = self.distance_window_down
+            sensitivity = self.sensitivity_down
 
-    def calculate_operational_noise_buffer(self, measurement_duration=5000):
-        start_time = utime.ticks_ms()
-        accel_data = []
-        gyro_data = []
+        # Project the normalized sensor data onto the principal components
+        projected_data = [
+            sum(normalized_data[i] * principal_components[j][i] for i in range(len(principal_components[0]))) - projected_mean[j]
+            for j in range(len(principal_components))
+        ]
 
-        while utime.ticks_diff(utime.ticks_ms(), start_time) < measurement_duration:
-            accel = self.mpu9250.acceleration
-            gyro = self.mpu9250.gyro
-            accel_data.append(accel)
-            gyro_data.append(gyro)
-            utime.sleep_ms(100)  # Short delay between readings
+        # Calculate the distance between the projected normalized sensor data and the projected mean
+        distance = sum(x ** 2 for x in projected_data) ** 0.5
+        print(f"direction:{direction}, distance: {distance}")
 
-        # Calculate the standard deviation for each axis as operational noise
-        axis_data = list(zip(*accel_data))
-        gyro_axis_data = list(zip(*gyro_data))
-        noise_levels = [math.sqrt(sum([(x - sum(axis) / len(axis)) ** 2 for x in axis]) / len(axis)) for axis in axis_data]
-        gyro_noise_levels = [math.sqrt(sum([(x - sum(axis) / len(axis)) ** 2 for x in axis]) / len(axis)) for axis in gyro_axis_data]
-        self.operational_noise_buffer = max(noise_levels)  # This is a simplistic approach
-        self.operational_gyro_noise_buffer = max(gyro_noise_levels)
+        # Update the sliding window with the new distance value
+        distance_window.append(distance)
+        if len(distance_window) > self.window_size:
+            distance_window.pop(0)
 
-    def collision_detected(self):
-        """
-        Simplified method to detect any type of collision or significant rotation.
-        
-        :return: True if any collision or significant rotation is detected, False otherwise.
-        """
-        collision_type = self.detect_collision()
-        if collision_type in ['hard', 'soft', 'rotation']:
-            print(f"{collision_type} collision/rotation detected!")
+        # Calculate the mean and standard deviation of the distances in the sliding window
+        mean_distance = sum(distance_window) / len(distance_window)
+        std_dev_distance = (sum((x - mean_distance) ** 2 for x in distance_window) / len(distance_window)) ** 0.5
+
+        # Set the adaptive threshold distance
+        threshold_distance = mean_distance + sensitivity * std_dev_distance
+        print(f"threshold_distance:{threshold_distance}")
+
+        # Check if the distance exceeds the adaptive threshold
+        if distance > threshold_distance:
+            print("Distance exceeds the adaptive threshold")
             return True
-        return False
-
-    def update_windows(self, accel, gyro):
-        """
-        Updates the windows of acceleration and gyroscope readings for moving average calculation.
-        """
-        if len(self.accel_window) >= self.window_size:
-            self.accel_window.pop(0)
-            self.gyro_window.pop(0)
-        
-        self.accel_window.append(accel)
-        self.gyro_window.append(gyro)
-
-    def moving_average(self, data_window):
-        """
-        Calculates the moving average for a given window of readings.
-        """
-        if not data_window:
-            return 0
-        avg = [sum(x) / len(data_window) for x in zip(*data_window)]
-        return math.sqrt(sum([x**2 for x in avg]))
-
-    def detect_collision(self):
-        """
-        Detects collisions, including soft obstacles, using both acceleration and gyroscope data.
-        
-        :return: 'hard' if a hard collision is detected, 'soft' for a soft collision, 'rotation' for significant rotation, None otherwise.
-        """
-        current_accel = self.mpu9250.acceleration
-        current_gyro = self.mpu9250.gyro
-        self.update_windows(current_accel, current_gyro)
-        
-        avg_accel_change = self.moving_average(self.accel_window)
-        avg_gyro_change = self.moving_average(self.gyro_window)
-        
-        detected_collision = None
-        if avg_accel_change > self.hard_threshold + self.operational_noise_buffer:
-            detected_collision = 'hard'
-        elif avg_accel_change > self.soft_threshold + self.operational_noise_buffer:
-            detected_collision = 'soft'
-        elif avg_gyro_change > self.gyro_threshold + self.operational_gyro_noise_buffer:
-            detected_collision = 'rotation'
-        
-        # Implement debounce mechanism
-        if detected_collision:
-            self.collision_count[detected_collision] += 1
-            if self.collision_count[detected_collision] >= self.debounce_count:
-                self.reset_collision_count()
-                return detected_collision
         else:
-            self.reset_collision_count()
+            return False
+        
+    def normalize_data(self, data):
+        # Extract acceleration, RPM, and current values from the data
+        accel_x, accel_y, accel_z, rpm, current = data
 
-        return None
-    
-    def reset_collision_count(self):
-        for key in self.collision_count:
-            self.collision_count[key] = 0
+        # Normalize acceleration values
+        min_accel = self.calibration_data["accel_down"]
+        max_accel = self.calibration_data["accel_up"]
+        normalized_accel_x = (accel_x - min_accel[0]) / (max_accel[0] - min_accel[0])
+        normalized_accel_y = (accel_y - min_accel[1]) / (max_accel[1] - min_accel[1])
+        normalized_accel_z = (accel_z - min_accel[2]) / (max_accel[2] - min_accel[2])
 
+        # Normalize RPM value
+        min_rpm = self.calibration_data["rpm_down"]
+        max_rpm = self.calibration_data["rpm_up"]
+        normalized_rpm = (rpm - min_rpm) / (max_rpm - min_rpm)
+
+        # Normalize current value
+        min_current = self.calibration_data["current_down"]
+        max_current = self.calibration_data["current_up"]
+        normalized_current = (current - min_current) / (max_current - min_current)
+
+        # Return the normalized data as a list
+        return [normalized_accel_x, normalized_accel_y, normalized_accel_z, normalized_rpm, normalized_current]
