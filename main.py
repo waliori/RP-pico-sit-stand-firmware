@@ -703,13 +703,11 @@ def set_sleep_value(sleep_value):
         sleep_value = sys.maxsize
     calibrationO.sleep_time = sleep_value
     sLock.acquire()
-    file=open("settings.json","r")
-    settings_json = json.loads(file.read())
-    settings_json["sleep_time"] = sleep_value
-    file.close()
-    file=open("settings.json","w")
-    file.write(json.dumps(settings_json))
-    file.close()
+    with open("settings.json","r") as file:
+        settings_json = json.loads(file.read())
+        settings_json["sleep_time"] = sleep_value
+    with open("settings.json","w") as file:
+        file.write(json.dumps(settings_json))
     sLock.release()
     displayO.clear_frame()
     preset_list = ["Done!", "Table will sleep", f"after: {displayO.seconds_to_timestamp(sleep_value)}"]
@@ -726,13 +724,11 @@ def set_rem_value(rem_value):
     calibrationO.reminder_time = rem_value
     displayO.reminder_time = rem_value
     sLock.acquire()
-    file=open("settings.json","r")
-    settings_json = json.loads(file.read())
-    settings_json["reminder_time"] = rem_value
-    file.close()
-    file=open("settings.json","w")
-    file.write(json.dumps(settings_json))
-    file.close()
+    with open("settings.json","r") as file:
+        settings_json = json.loads(file.read())
+        settings_json["reminder_time"] = rem_value
+    with open("settings.json","w") as file:
+        file.write(json.dumps(settings_json))
     sLock.release()
     displayO.clear_frame()
     preset_list = ["Done!", "Change Posture", f"in: {displayO.seconds_to_timestamp(rem_value)}"]
