@@ -1,4 +1,6 @@
 *.json
 /dev
+/tryin*
 .vscode
 .micropico
+/_py*

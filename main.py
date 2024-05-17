@@ -1,3 +1,5 @@
+# from machine import WDT
+
 from setup import *
 import _thread
 from abutton import Pushbutton
@@ -5,7 +7,10 @@ import uasyncio
 from time import time
 import machine
 # import math
+print("==============")
+print("imports done")
 
+# wdt = WDT(timeout=8388)  # enable it with a timeout of 2s
 # Motor Section
 #TODO modifier go height to calculate current height + wanted height < max
 #TODO add acceleration + position to know if impact        
@@ -16,6 +21,8 @@ sound_menu = ["Back to Conf","On/Off","Melodies"]
 menu = ["Back to Wifi","Connect","Forget"]
 mm = ["Back to Conf","Min","Max"]
 chosen_wf = ""
+
+
 
 pb_up = Pushbutton(up_button, suppress=True)
 pb_down = Pushbutton(down_button, suppress=True)
@@ -29,6 +36,12 @@ pb_three = Pushbutton(three_button, suppress=True)
 start_tm = time()
 start_tm_rem = time()
 
+button_pressed = False
+current_melody_id = None
+
+loop = asyncio.get_event_loop()
+
+print("initial setup done -------")
 def move_motor(button,calibration=False):
     motorO.move_motor(button,up_button,outA,outB,calibrationO.min_encoder, calibrationO.max_encoder, calibration )          
             
@@ -40,7 +53,7 @@ def show_menu(menu):
     menuO.menu_state = True
     menuO.reset_state = False
     menuO.presets_state = False
-    calibrationO.idle_state = False
+    calibrationO.system_idle = False
     line = 1
     displayO.show_menu(menu, line, menuO.highlight, menuO.shift,menuO.total_lines,"Menu",wifiO.wifi,wifiO.aps)
     sLock.release()
@@ -77,7 +90,7 @@ def connect_c_wifi(wifi):
         displayO.show_frame()
         menuO.presets_state = True
         menuO.menu_state = False
-        calibrationO.idle_state = False
+        calibrationO.system_idle = False
         displayO.text_frame("Could not connect, try again")
         displayO.show_header("WiFi",wifiO.wifi,wifiO.aps)
         displayO.oled.show()
@@ -108,7 +121,7 @@ def config_menu():
     global conf_menu
     menuO.highlight = 1
     menuO.menu_state = False
-    calibrationO.idle_state = False
+    calibrationO.system_idle = False
     sLock.acquire()    
     line = 1    
     displayO.oled.fill(0)
@@ -126,7 +139,7 @@ def config_menu():
 def wifi_menu():
     menuO.highlight = 1
     menuO.menu_state = False
-    calibrationO.idle_state = False
+    calibrationO.system_idle = False
     sLock.acquire()    
     line = 1    
     displayO.oled.fill(0)
@@ -149,7 +162,7 @@ def wifi_menu():
 def connect_wifi():
     menuO.highlight = 1
     menuO.menu_state = False
-    calibrationO.idle_state = False
+    calibrationO.system_idle = False
     line = 1    
     displayO.oled.fill(0)
     displayO.show_frame()
@@ -185,8 +198,7 @@ def c_wifi(wifi):
     displayO.show_frame()  
     displayO.show_menu(menu, line, menuO.highlight, menuO.shift,min(len(menu),menuO.total_lines),wifi,wifiO.wifi,wifiO.aps)
 
-button_pressed = False
-current_melody_id = None
+
 
 async def a_c_melody(melody,melody_id):
     global button_pressed
@@ -222,7 +234,7 @@ def go_home():
     sLock.acquire()
     buzzvibO.play_tone(0, 0)
     buzzvibO.stop()
-    calibrationO.idle_state = True
+    calibrationO.system_idle = True
     menuO.s_w_state = False
     menuO.wc_state = False
     menuO.wc_c_state = False
@@ -529,30 +541,32 @@ def disable_button():
 def confirm_reset():
     sLock.acquire()
     displayO.oled.fill(0)
-    displayO.show_header("Factory R",wifiO.wifi,wifiO.aps)
+    displayO.show_header("F Reset",wifiO.wifi,wifiO.aps)
     displayO.show_frame()
     displayO.text_frame("All seetings and presets will be wiped, do you confirm?")
     menuO.reset_state = True
     menuO.menu_state = False
-    calibrationO.idle_state = False
+    calibrationO.system_idle = False
     sLock.release()
 
 def confirm_reset_collision():
     sLock.acquire()
     displayO.oled.fill(0)
-    displayO.show_header("Collision R",wifiO.wifi,wifiO.aps)
+    displayO.show_header("C Reset",wifiO.wifi,wifiO.aps)
     displayO.show_frame()
     displayO.text_frame("Collision settings will be wiped, do you confirm?")
     menuO.collision_reset_state = True
     menuO.menu_state = False
-    calibrationO.idle_state = False
+    calibrationO.system_idle = False
     sLock.release()
     
 def reset_collision():
     menuO.collision_reset_state = False
     menuO.menu_state = False
-    calibrationO.idle_state = False
-    calibrationO.semi_collision_state = True
+    calibrationO.system_idle = False
+    calibrationO.collision_reset_state = True
+    encoder_value = calibrationO.min_encoder+10
+    motorO.move_motor_height("down",outA, outB, encoder_value)
     sLock.acquire()
     displayO.clear_frame()
     displayO.text_frame("Go to HIGHEST position then to LOWEST, then confirm")
@@ -594,7 +608,7 @@ def show_presets():
     sLock.acquire()
     menuO.presets_state = True
     menuO.menu_state = False
-    calibrationO.idle_state = False
+    calibrationO.system_idle = False
     motorO.api = False
     presets = presetsO.presets
     displayO.oled.fill(0)
@@ -613,7 +627,7 @@ def show_calibration():
     sLock.acquire()
     menuO.presets_state = True
     menuO.menu_state = False
-    calibrationO.idle_state = False
+    calibrationO.system_idle = False
     motorO.api = False
     min_max = ["Min: {}".format(calibrationO.min_real), "Max: {}".format(calibrationO.max_real)]
     displayO.oled.fill(0)
@@ -630,7 +644,7 @@ def show_ip():
     menuO.wc_state = False
     menuO.wc_c_state = False
     menuO.menu_state = False
-    calibrationO.idle_state = False
+    calibrationO.system_idle = False
     motorO.api = False
     if wifiO.wlan.isconnected():
         ip = ["IP address: ",wifiO.wlan.ifconfig()[0]]
@@ -649,7 +663,7 @@ def lock_unlock():
     sLock.acquire()
     menuO.presets_state = True
     menuO.menu_state = False
-    calibrationO.idle_state = False
+    calibrationO.system_idle = False
     motorO.api = False
     if not displayO.lock_state:
         displayO.lock_state = True
@@ -701,13 +715,11 @@ def set_sleep_value(sleep_value):
         sleep_value = sys.maxsize
     calibrationO.sleep_time = sleep_value
     sLock.acquire()
-    file=open("settings.json","r")
-    settings_json = json.loads(file.read())
-    settings_json["sleep_time"] = sleep_value
-    file.close()
-    file=open("settings.json","w")
-    file.write(json.dumps(settings_json))
-    file.close()
+    with open("settings.json","r") as file:
+        settings_json = json.loads(file.read())
+        settings_json["sleep_time"] = sleep_value
+    with open("settings.json","w") as file:
+        file.write(json.dumps(settings_json))
     sLock.release()
     displayO.clear_frame()
     preset_list = ["Done!", "Table will sleep", f"after: {displayO.seconds_to_timestamp(sleep_value)}"]
@@ -724,13 +736,11 @@ def set_rem_value(rem_value):
     calibrationO.reminder_time = rem_value
     displayO.reminder_time = rem_value
     sLock.acquire()
-    file=open("settings.json","r")
-    settings_json = json.loads(file.read())
-    settings_json["reminder_time"] = rem_value
-    file.close()
-    file=open("settings.json","w")
-    file.write(json.dumps(settings_json))
-    file.close()
+    with open("settings.json","r") as file:
+        settings_json = json.loads(file.read())
+        settings_json["reminder_time"] = rem_value
+    with open("settings.json","w") as file:
+        file.write(json.dumps(settings_json))
     sLock.release()
     displayO.clear_frame()
     preset_list = ["Done!", "Change Posture", f"in: {displayO.seconds_to_timestamp(rem_value)}"]
@@ -740,7 +750,7 @@ def set_rem_value(rem_value):
     displayO.oled.fill(0)
     config_menu()
     
-loop = asyncio.get_event_loop()
+
 
 async def alarm():
     tune = RTTTL(songs.find(buzzvibO.melody))
@@ -777,25 +787,27 @@ def task_display_navigation():
     rem_previousValue = calibrationO.reminder_time+1    
 #     x=True
     while True:
+        
         sLock.acquire()
-        if motorO.is_moving():
-            accelO.show_accel()
+
         # not calibrated and not semi calibrated and not idle (AKA first boot of the system)
-        if not calibrationO.calibrated and not calibrationO.semi_calibrated and not calibrationO.idle_state and not calibrationO.speed_calibrated:
+        if not calibrationO.enc_calib and not calibrationO.max_enc_set and not calibrationO.system_idle and not calibrationO.speed_calib:
+            if motorO.is_moving():                
+                motorO.update_pca()
             pb_up.press_func(move_motor, (up_button,True))
-            pb_down.press_func(move_motor, (down_button,True))
-            pb_switch.release_func(calibrationO.semi_calibrate, ())
+            pb_down.press_func(move_motor, (down_button,True))#TODO mayber remove ability to go down            
+            pb_switch.release_func(calibrationO.set_max_enc, ())            
+#             motorO.update_pca()
         # not calibrated but semi calibrated and not idle (highest point set) 
-        elif not calibrationO.calibrated and  calibrationO.semi_calibrated and not calibrationO.idle_state and not calibrationO.speed_calibrated:
+        elif not calibrationO.enc_calib and  calibrationO.max_enc_set and not calibrationO.system_idle and not calibrationO.speed_calib:
             # not real semi calibrated ()
-            if not calibrationO.real_semi_calibrated:
+            if not calibrationO.max_real_set:
                 pb_up.press_func(disable_button, ())
                 pb_down.press_func(disable_button, ())
                 pb_one.press_func(toggle_01, ())
                 pb_two.press_func(toggle_10, ())
                 pb_three.press_func(toggle_100, ())
-                pb_switch.release_func(calibrationO.real_semi_calibrate, (height_value,))
-                
+                pb_switch.release_func(calibrationO.set_max_real, (height_value,))                
                 if height_previousValue != step_pin.value():
                     if step_pin.value() == False:
                         if direction_pin.value() == True:
@@ -822,20 +834,23 @@ def task_display_navigation():
                     utime.sleep_ms(1)
             # real semi calibrated done
             # TODO verify if else works
-            elif calibrationO.real_semi_calibrated:
+            elif calibrationO.max_real_set:
+                if motorO.is_moving():
+                    motorO.update_pca()
                 pb_up.press_func(move_motor, (up_button,True))
                 pb_down.press_func(move_motor, (down_button,True))
-                pb_switch.release_func(calibrationO.calibrate, ())
-        # if calibrated and semi_calibrated and not idle (Highest point Done, starting lower)
-        elif calibrationO.calibrated and  calibrationO.semi_calibrated and not calibrationO.idle_state and not calibrationO.speed_calibrated:
+                pb_switch.release_func(calibrationO.set_min_enc, ())
+                #motorO.update_pca()
+        # if calibrated and max_enc_set and not idle (Highest point Done, starting lower)
+        elif calibrationO.enc_calib and  calibrationO.max_enc_set and not calibrationO.system_idle and not calibrationO.speed_calib:
             # calibrated but not real calibrated 
-            if not calibrationO.real_calibrated:
+            if not calibrationO.real_calib:
                 pb_up.press_func(disable_button, ())
                 pb_down.press_func(disable_button, ())
                 pb_one.press_func(toggle_01, ())
                 pb_two.press_func(toggle_10, ())
                 pb_three.press_func(toggle_100, ())
-                pb_switch.release_func(calibrationO.real_calibrate, (height_value,))
+                pb_switch.release_func(calibrationO.set_min_real, (height_value,))
                 if height_previousValue != step_pin.value():
                     if step_pin.value() == False:
                         if direction_pin.value() == True:
@@ -860,8 +875,34 @@ def task_display_navigation():
                         displayO.show_header("Setup",wifiO.wifi,wifiO.aps)
                         displayO.show_height_frame(str(round(height_value,1)),0)
                     height_previousValue = step_pin.value()
-                    utime.sleep_ms(1)    
-        if menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
+                    utime.sleep_ms(1)
+                    
+        if motorO.is_moving() and not motorO.slowing:
+            print(f"{collisionO.detect_obstacle(motorO.direction,[motorO.avg_xyz[0],motorO.avg_xyz[1],motorO.avg_xyz[2],motorO.avg_rpm,motorO.current_threshold])}")
+#             print(f"{motorO.avg_xyz}")
+#             sensor_data = [motorO.avg_xyz[0],motorO.avg_xyz[1],motorO.avg_xyz[2],motorO.avg_rpm,motorO.current_threshold]
+#             direction = motorO.direction
+#             print(f"{motorO.direction}")
+#             print(f"{[motorO.avg_xyz[0],motorO.avg_xyz[1],motorO.avg_xyz[2],motorO.avg_rpm,motorO.current_threshold]}")
+#             if collisionO.detect_obstacle(motorO.direction,[motorO.avg_xyz[0],motorO.avg_xyz[1],motorO.avg_xyz[2],motorO.avg_rpm,motorO.current_threshold]):
+#                 print("collision")
+#             else:
+#                 print("ok")
+#                 print(f" x,y,z,rpm, current:  {[motorO.avg_xyz[0],motorO.avg_xyz[1],motorO.avg_xyz[2],motorO.avg_rpm,motorO.current_threshold]}")
+            #print(f"{motorO.projected_mean_down}, {motorO.projected_mean_up}")
+            #motorO.blocked = True
+            #if motorO.direction == 1:
+#                 print(f"rpm: {motorO.avg_rpm < calibrationO.rpm_up}, avg:{motorO.avg_rpm}, tresh:{calibrationO.rpm_up}")
+#                 print(f"current: {motorO.current_threshold > calibrationO.curr_up}, avg:{motorO.current_threshold}, tresh:{calibrationO.curr_up}")
+            #   print("---------------------------")
+#             elif motorO.direction == -1:
+#                 print(f"x_sens:{motorO.avg_xyz[0]}, y_sens:{motorO.avg_xyz[1]}, z_sens:{motorO.avg_xyz[2]}")
+#                 print(f"x_tresh:{calibrationO.accel_down[0]}, y_tresh:{calibrationO.accel_down[1]}, z_tresh:{calibrationO.accel_down[2]}")
+#                 print(f"rpm_sens:{motorO.avg_rpm}, rpm_tresh:{calibrationO.rpm_down}")
+#                 print(f"current_sens:{motorO.current_threshold}, current_tresh:{calibrationO.curr_down}")
+#                 print("---------------------------")
+
+        if menuO.menu_state and not calibrationO.system_idle and not motorO.api and calibrationO.speed_calib:
             menuO.move_exec_menu_encoder(step_pin,direction_pin,menu_list,"Menu",wifiO.wifi,wifiO.aps)                                  
             pb_up.press_func(handle_button, (menuO.move_menu_buttons,("up",menu_list,"Menu",wifiO.wifi,wifiO.aps,)))
             pb_down.press_func(handle_button, (menuO.move_menu_buttons,("down",menu_list,"Menu",wifiO.wifi,wifiO.aps,)))
@@ -870,7 +911,7 @@ def task_display_navigation():
             pb_one.release_func(disable_button, ())
             pb_two.release_func(disable_button, ())
             pb_three.release_func(disable_button, ())
-        elif menuO.reset_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
+        elif menuO.reset_state and not menuO.menu_state and not calibrationO.system_idle and not motorO.api and calibrationO.speed_calib:
             pb_up.press_func(disable_button, ())
             pb_down.press_func(disable_button, ())
             pb_switch.release_func(factory_reset, ())
@@ -879,7 +920,7 @@ def task_display_navigation():
             pb_two.release_func(disable_button, ())
             pb_three.release_func(disable_button, ())
         #enter collision reset menu
-        elif menuO.collision_reset_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
+        elif menuO.collision_reset_state and not menuO.menu_state and not calibrationO.system_idle and not motorO.api and calibrationO.speed_calib:
             pb_up.press_func(disable_button, ())
             pb_down.press_func(disable_button, ())
             pb_switch.release_func(reset_collision, ())
@@ -888,16 +929,18 @@ def task_display_navigation():
             pb_two.release_func(disable_button, ())
             pb_three.release_func(disable_button, ())
         # confirm reset
-        elif calibrationO.semi_collision_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
+        #TODO should be separated into 2 phases UP then DOwn for cleaner code and better ux
+        elif calibrationO.collision_reset_state and not menuO.menu_state and not calibrationO.system_idle and not motorO.api and calibrationO.speed_calib:
             if motorO.counter <= calibrationO.min_encoder+10 and motorO.direction == -1:
                 pb_up.press_func(move_motor, (up_button,True))
                 pb_down.press_func(disable_button, ())
                 motorO.stop_motor()
+                calibrationO.set_avg_vals("down")
             elif motorO.counter >= calibrationO.max_encoder-10 and motorO.direction == 1:
                 pb_up.press_func(disable_button, ())
                 pb_down.press_func(move_motor, (down_button,True))
                 motorO.stop_motor()
-                
+                calibrationO.set_avg_vals("up")
             if motorO.direction == -1:
                 pb_up.press_func(move_motor, (up_button,True))
                 pb_down.press_func(disable_button, ())
@@ -907,7 +950,9 @@ def task_display_navigation():
             elif motorO.direction == 0:
                 pb_up.press_func(move_motor, (up_button,True))
                 pb_down.press_func(move_motor, (down_button,True))
-            pb_switch.release_func(calibrationO.collision_semi_calibrate, ())
+            if motorO.is_moving():
+                motorO.update_pca()
+            pb_switch.release_func(calibrationO.reset_collision, ())
             pb_switch.long_func(disable_button, ())
             pb_one.release_func(disable_button, ())
             pb_two.release_func(disable_button, ())
@@ -915,9 +960,8 @@ def task_display_navigation():
 
             if up_button.value() == 0 or down_button.value() == 0:
                 displayO.show_height_frame(str(calibrationO.real_height(motorO.counter)),motorO.rpm)
-
         # Show message when clik on menu item
-        elif menuO.presets_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
+        elif menuO.presets_state and not menuO.menu_state and not calibrationO.system_idle and not motorO.api and calibrationO.speed_calib:
             pb_up.press_func(disable_button, ())
             pb_down.press_func(disable_button, ())
             pb_switch.release_func(go_back, ())
@@ -926,7 +970,7 @@ def task_display_navigation():
             pb_two.release_func(disable_button, ())
             pb_three.release_func(disable_button, ())
         # Show list of wifis
-        elif menuO.wc_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
+        elif menuO.wc_state and not menuO.menu_state and not calibrationO.system_idle and not motorO.api and calibrationO.speed_calib:
             menuO.move_exec_menu_encoder(step_pin,direction_pin,wifiO.nearby,"Wifi",wifiO.wifi,wifiO.aps)                                  
             pb_up.press_func(menuO.move_menu_buttons, ("up",wifiO.nearby,"Wifi",wifiO.wifi,wifiO.aps,))
             pb_down.press_func(menuO.move_menu_buttons, ("down",wifiO.nearby,"Wifi",wifiO.wifi,wifiO.aps,))
@@ -935,7 +979,7 @@ def task_display_navigation():
             pb_one.release_func(disable_button, ())
             pb_two.release_func(disable_button, ())
             pb_three.release_func(disable_button, ())
-        elif menuO.wc_c_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
+        elif menuO.wc_c_state and not menuO.menu_state and not calibrationO.system_idle and not motorO.api and calibrationO.speed_calib:
             menuO.move_exec_menu_encoder(step_pin,direction_pin,menu,chosen_wf,wifiO.wifi,wifiO.aps)                                  
             pb_up.press_func(menuO.move_menu_buttons, ("up",menu,chosen_wf,wifiO.wifi,wifiO.aps,))
             pb_down.press_func(menuO.move_menu_buttons, ("down",menu,chosen_wf,wifiO.wifi,wifiO.aps,))
@@ -944,7 +988,7 @@ def task_display_navigation():
             pb_one.release_func(disable_button, ())
             pb_two.release_func(disable_button, ())
             pb_three.release_func(disable_button, ())
-        elif menuO.forget_w_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
+        elif menuO.forget_w_state and not menuO.menu_state and not calibrationO.system_idle and not motorO.api and calibrationO.speed_calib:
             pb_up.press_func(disable_button, ())
             pb_down.press_func(disable_button, ())
             pb_switch.release_func(forget_wifi, (chosen_wf,))
@@ -952,7 +996,7 @@ def task_display_navigation():
             pb_one.release_func(disable_button, ())
             pb_two.release_func(disable_button, ())
             pb_three.release_func(disable_button, ())
-        elif menuO.s_w_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
+        elif menuO.s_w_state and not menuO.menu_state and not calibrationO.system_idle and not motorO.api and calibrationO.speed_calib:
             saved_wifis = wifiO.saved_json
             w_l = list(saved_wifis.keys())
             if wifiO.wlan.isconnected():
@@ -965,7 +1009,7 @@ def task_display_navigation():
             pb_one.release_func(disable_button, ())
             pb_two.release_func(disable_button, ())
             pb_three.release_func(disable_button, ())
-        elif menuO.cf_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
+        elif menuO.cf_state and not menuO.menu_state and not calibrationO.system_idle and not motorO.api and calibrationO.speed_calib:
             if menuO.slp_state:
                 pb_up.press_func(disable_button, ())
                 pb_down.press_func(disable_button, ())
@@ -1047,7 +1091,7 @@ def task_display_navigation():
                 pb_one.release_func(disable_button, ())
                 pb_two.release_func(disable_button, ())
                 pb_three.release_func(disable_button, ())
-        elif menuO.cf_h_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
+        elif menuO.cf_h_state and not menuO.menu_state and not calibrationO.system_idle and not motorO.api and calibrationO.speed_calib:
             if menuO.min_state:
                 pb_up.press_func(disable_button, ())
                 pb_down.press_func(disable_button, ())
@@ -1121,7 +1165,7 @@ def task_display_navigation():
                 pb_one.release_func(disable_button, ())
                 pb_two.release_func(disable_button, ())
                 pb_three.release_func(disable_button, ())
-        elif menuO.cf_s_state and not menuO.menu_state and not calibrationO.idle_state and not motorO.api and calibrationO.speed_calibrated:
+        elif menuO.cf_s_state and not menuO.menu_state and not calibrationO.system_idle and not motorO.api and calibrationO.speed_calib:
             if menuO.cf_mel_state:
                 menuO.move_exec_menu_encoder(step_pin,direction_pin,buzzvibO.songs,"Melodies",wifiO.wifi,wifiO.aps,c_melody)                                  
                 pb_up.press_func(menuO.move_menu_buttons, ("up",buzzvibO.songs,"Melodies",wifiO.wifi,wifiO.aps,c_melody,))
@@ -1148,7 +1192,7 @@ def task_display_navigation():
                 pb_one.release_func(disable_button, ())
                 pb_two.release_func(disable_button, ())
                 pb_three.release_func(disable_button, ())
-        elif motorO.api and not menuO.presets_state and not menuO.menu_state and not calibrationO.idle_state and calibrationO.speed_calibrated:
+        elif motorO.api and not menuO.presets_state and not menuO.menu_state and not calibrationO.system_idle and calibrationO.speed_calib:
             pb_up.press_func(disable_button, ())
             pb_down.press_func(disable_button, ())
             pb_switch.release_func(disable_button, ())
@@ -1158,7 +1202,7 @@ def task_display_navigation():
             pb_three.release_func(disable_button, ())
         else:
             #if idle show height and handle motor stoping if reach lowest or heighest point (calibration result)
-            if calibrationO.idle_state:                                               
+            if calibrationO.system_idle:                                               
                 if motorO.counter <= calibrationO.min_encoder+10 and motorO.direction == -1:
                     pb_up.press_func(handle_button, (move_motor, (up_button,)))
                     pb_down.press_func(disable_button, ())
@@ -1177,9 +1221,8 @@ def task_display_navigation():
                 elif motorO.direction == 0:
                     pb_up.press_func(handle_button, (move_motor, (up_button,)))
                     pb_down.press_func(handle_button, (move_motor, (down_button,)))
-                    
                 #addig to that, we display current real height and handle buttons
-                if (not displayO.sleep_state and not displayO.rem_state) and not menuO.menu_state and not displayO.lock_state and calibrationO.speed_calibrated:
+                if (not displayO.sleep_state and not displayO.rem_state) and not menuO.menu_state and not displayO.lock_state and calibrationO.speed_calib:
                     elapsed_time = (utime.ticks_ms() - displayO.start_time) / 1000.0  # Convert to seconds
                     remaining_ratio = min(1, elapsed_time / displayO.reminder_time)  # Calculate the remaining time ratio
                     displayO.progress_fill = int(remaining_ratio * 97)  # Calculate fill amount, scale it according to the length of the progress bar
@@ -1195,13 +1238,11 @@ def task_display_navigation():
                     pb_one.long_func(set_preset, ('1',))
                     pb_two.long_func(set_preset, ('2',))
                     pb_three.long_func(set_preset, ('3',))
-                    if time() - start_tm_rem >= calibrationO.reminder_time:
+                    if time() - start_tm_rem >= calibrationO.reminder_time and calibrationO.reminder_time < 86401:
                         displayO.alarm()
                     if time() - start_tm >= calibrationO.sleep_time:
                         displayO.dim()
-                    
-                        
-                elif displayO.rem_state and not menuO.menu_state and not displayO.lock_state and calibrationO.speed_calibrated:
+                elif displayO.rem_state and not menuO.menu_state and not displayO.lock_state and calibrationO.speed_calib:
                     pb_up.press_func(stp_rem, ())
                     pb_down.press_func(stp_rem, ())
                     pb_switch.release_func(stp_rem, ())
@@ -1213,12 +1254,7 @@ def task_display_navigation():
                     pb_two.long_func(stp_rem, ())
                     pb_three.long_func(stp_rem, ())
                     loop.run_until_complete(alarm())
-                    
-                    
-                    
-
-                
-                elif displayO.sleep_state and not menuO.menu_state and not displayO.lock_state and calibrationO.speed_calibrated:
+                elif displayO.sleep_state and not menuO.menu_state and not displayO.lock_state and calibrationO.speed_calib:
                     pb_up.press_func(awake, ())
                     pb_down.press_func(awake, ())
                     pb_switch.release_func(awake, ())
@@ -1231,9 +1267,6 @@ def task_display_navigation():
                     pb_three.long_func(awake, ())
                     if time() - start_tm_rem >= calibrationO.reminder_time:
                         displayO.alarm()
-                
-                        
-                
                 else:
                     pb_up.press_func(disable_button, ())
                     pb_down.press_func(disable_button, ())
@@ -1243,7 +1276,8 @@ def task_display_navigation():
                     pb_one.release_func(disable_button, ())
                     pb_two.release_func(disable_button, ())
                     pb_three.release_func(disable_button, ())
-#         loop.run_until_complete(asyncio.sleep(0))
+        
+        utime.sleep_ms(10)
         sLock.release()
         
 
@@ -1485,8 +1519,8 @@ def toggle_server(loop,operation):
             res.headers["Access-Control-Allow-Methods"] = '*'
             res.body = json.dumps({"status":  "ok"})              
             return res 
-    
-       
+print("-----------")    
+print("staarting main loop")       
 _thread.start_new_thread(task_display_navigation, ())
 
 if wifiO.wlan.isconnected():
@@ -1507,6 +1541,8 @@ except KeyboardInterrupt:
     loop.close()
 
 
+
+# wdt.feed()
 
 
 

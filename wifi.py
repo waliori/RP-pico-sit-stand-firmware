@@ -141,22 +141,23 @@ class Wifi:
     
     #<style>.center{display:flex;justify-content:center;align-items:center;flex-direction:column}body{display:flex;flex-direction:column;min-height:100vh;position:relative;font-family:Arial,sans-serif;padding:20px}form{width:80%;max-width:600px;margin:0 auto;padding:20px;border-radius:10px;background-color:#f5f5f5}legend{font-size:1.2em;font-weight:700;margin-bottom:10px}input[type=radio]{display:inline-block;margin-right:10px}label{display:inline-block;padding-bottom:5px}hr{border:none;height:1px;background-color:#ccc;margin:10px 0}input[type=submit]{background-color:#4caf50;color:#fff;padding:12px 20px;border:none;border-radius:4px;cursor:pointer;margin-top:20px}input[type=submit]:hover{background-color:#45a049}ul{list-style:none;padding:0;margin:0;text-align:center}li{display:inline-block;margin:20px}a{color:#333;text-decoration:none;font-size:1.2em}a:hover{color:#4caf50}.label-radio-container{display: flex;align-items: center;}</style>
     def htmlssid(self):
-        htmldoc = """<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Title Example</title></head><body><h3>WiFi Setup by <a href="https://walior.it" target="_blank">waliori</a></h3><p>if the connection is successful the pico will soft reboot</p><form action="/save" method="post" class="center"><fieldset><legend>Choose your new ssid and enter your password </legend><i id="error" style="color:red;" hidden>Error connecting, try again</i><div><div class="center"><div id="ssids" style="display: inline-grid;"><hr>"""
-        ssids = sorted(ssid.decode('utf-8') for ssid, *_ in self.wlan.scan())
-        ssids_near=[]
-        while len(ssids):            
-            ssid = ssids.pop(0)
-            if ssid != "" and ssid not in self.saved_json:                    
-                htmldoc += """<div class="label-radio-container"><input type="radio" id="{0}" name="ssid" value="{0}"><label for="{0}">{0}</label></div>""".format(ssid)
-            if ssid in self.saved_json:
-                ssids_near.append(ssid)
-        htmldoc += """<hr></div><div class="center"><label for="password">Password:</label><input type="password" id="password" name="password"></div></fieldset><div class="center"><input type="submit" value="Submit"><button type="button" onclick="window.location.href = window.location.href.split('?')[0]">Can't see your wifi, Refresh the list</button></div></form><div class="center"><form action="/connect" method="post" class="center"><fieldset><legend>Already saved wifi near you</legend>"""
-        while len(ssids_near):
-            ssid = ssids_near.pop(0)
-            password = self.saved_json[ssid]
-            htmldoc += """<input type="radio" id="{0}" name="ssid2" value="{0}"><label for="{0}">{0}</label><input type="password" id="password2" name="password2" value="{1}">""".format(ssid,password)
-        htmldoc +=  """</fieldset><input type="submit" value="Connect"></form></div><script>if(window.location.search != ""){document.getElementById("error").hidden = false}</script>"""
-        return htmldoc
+        def generate_html():
+            yield """<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Title Example</title></head><body><h3>WiFi Setup by <a href="https://walior.it" target="_blank">waliori</a></h3><p>if the connection is successful the pico will soft reboot</p><form action="/save" method="post" class="center"><fieldset><legend>Choose your new ssid and enter your password </legend><i id="error" style="color:red;" hidden>Error connecting, try again</i><div><div class="center"><div id="ssids" style="display: inline-grid;"><hr>"""
+            ssids = sorted(ssid.decode('utf-8') for ssid, *_ in self.wlan.scan())
+            ssids_near=[]
+            while len(ssids):            
+                ssid = ssids.pop(0)
+                if ssid != "" and ssid not in self.saved_json:                    
+                    yield """<div class="label-radio-container"><input type="radio" id="{0}" name="ssid" value="{0}"><label for="{0}">{0}</label></div>""".format(ssid)
+                if ssid in self.saved_json:
+                    ssids_near.append(ssid)
+            yield """<hr></div><div class="center"><label for="password">Password:</label><input type="password" id="password" name="password"></div></fieldset><div class="center"><input type="submit" value="Submit"><button type="button" onclick="window.location.href = window.location.href.split('?')[0]">Can't see your wifi, Refresh the list</button></div></form><div class="center"><form action="/connect" method="post" class="center"><fieldset><legend>Already saved wifi near you</legend>"""
+            while len(ssids_near):
+                ssid = ssids_near.pop(0)
+                password = self.saved_json[ssid]
+                yield """<input type="radio" id="{0}" name="ssid2" value="{0}"><label for="{0}">{0}</label><input type="password" id="password2" name="password2" value="{1}">""".format(ssid,password)
+            yield  """</fieldset><input type="submit" value="Connect"></form></div><script>if(window.location.search != ""){document.getElementById("error").hidden = false}</script>"""
+        return ''.join(generate_html())
     
     def forget_wifi(self,ssid):
         self.sLock.acquire()
