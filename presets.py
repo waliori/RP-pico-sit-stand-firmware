@@ -1,3 +1,6 @@
+"""
+author: waliori
+"""
 import json
 class Presets:
     def __init__(self, motorO,calibrationO,sLock):

@@ -1,3 +1,6 @@
+"""
+author: waliori
+"""
 from microdot_asyncio import Microdot, Response
 from machine import Pin, Timer, I2C, PWM, ADC
 import display, motor, wifi, calibration, menu, presets, buzz_vib, songs, accelerometer, acs712, collision

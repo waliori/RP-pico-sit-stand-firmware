@@ -1,3 +1,6 @@
+"""
+author: waliori
+"""
 from machine import Pin, I2C
 from sh1106 import SH1106_I2C
 import framebuf

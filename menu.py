@@ -1,3 +1,6 @@
+"""
+author: waliori
+"""
 class Menu:
     def __init__(self,displayO):
         self.menu_state = False

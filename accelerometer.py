@@ -1,3 +1,6 @@
+"""
+author: waliori
+"""
 from machine import Pin, I2C
 import time
 import ustruct
