@@ -1,5 +1,6 @@
-# TinyPICO RTTTL Player
-# This should also work with any ESP32  
+"""
+author: waliori
+""" 
 import time, json
 import uasyncio as asyncio
 import songs

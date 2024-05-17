@@ -1,3 +1,6 @@
+"""
+author: waliori
+"""
 #TODO add file.close()
 import json
 import utime

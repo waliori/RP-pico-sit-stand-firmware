@@ -1,3 +1,6 @@
+"""
+author: waliori
+"""
 class Collision:
     def __init__(self, calibrationO):
         self.calibration_data = calibrationO.calib
