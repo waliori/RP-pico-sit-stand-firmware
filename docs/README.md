@@ -11,6 +11,7 @@ Documentation for the Smart Sit-Stand Desk Controller project built with Raspber
 ### Hardware
 - **[Hardware Overview](hardware/overview.md)** - Components and pin assignments
 - **[Bill of Materials](hardware/bom.md)** - Electronic components list
+- **[3D Models & CAD Files](https://cad.onshape.com/documents/f9483c31494feda60f507100/w/67832ca84d886d2bfa4006b1/e/62aed646cd76d0a16e7ccfc5?renderMode=0&uiState=68916ac8ffbe3d6103e400d4)** - Open-source CAD models
 
 ### Software  
 - **[System Architecture](software/architecture.md)** - Software design and modules

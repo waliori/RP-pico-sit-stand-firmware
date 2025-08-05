@@ -27,6 +27,7 @@ Hardware components and connections for the Smart Sit-Stand Desk Controller.
 - **Buzzer** - Piezo buzzer (PWM driven)
 - **Vibration Motor** - Coin vibration motor 3V
 - **Connection Wires** - For linking components
+- **3D Printed Enclosures** - Custom housings and mounts (CAD files available)
 
 ## 🔗 Pin Assignments
 

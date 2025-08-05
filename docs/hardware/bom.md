@@ -58,7 +58,7 @@ Electronic components list for building the Smart Sit-Stand Desk Controller. Qua
 - **Shipping costs** and delivery time preferences
 - **Bulk vs individual** purchasing decisions
 - **Regional pricing** variations
-- **3D printing and mechanical components** (not included in electronics BOM)
+- **3D printing and mechanical components** (not included in electronics BOM - see CAD files below)
 - **Tools and assembly materials** (solder, heat shrink, etc.)
 
 ## 🛒 Sourcing Recommendations
@@ -142,7 +142,7 @@ Final safety and monitoring:
 - **Power Supply**: Ensure proper electrical isolation
 - **Motor Current**: Verify H-bridge can handle motor load
 - **Heat Dissipation**: Consider cooling for high-power components
-- **Enclosure**: Use fire-resistant materials for electronics
+- **Enclosure**: Use fire-resistant materials for electronics (3D printable designs available)
 
 ### Quality Recommendations
 - **Critical Components**: Buy from reputable suppliers
@@ -171,13 +171,18 @@ Before starting your build:
 
 ## 🔗 Useful Links
 
-- **3D Print Files**: [GitHub Repository STL Files](https://github.com/waliori/RP-pico-sit-stand-firmware/tree/main/hardware)
+### 🎨 **3D Models & CAD Files** (Fully Open Source)
+- **📐 Complete CAD Models**: [OnShape CAD Document](https://cad.onshape.com/documents/f9483c31494feda60f507100/w/67832ca84d886d2bfa4006b1/e/62aed646cd76d0a16e7ccfc5?renderMode=0&uiState=68916ac8ffbe3d6103e400d4) - Fully editable CAD format
+- **🖨️ 3D Printable Parts**: All enclosures, mounts, and brackets available in native CAD format
+- **📝 Mechanical Drawings**: Dimensions and tolerances included in CAD
+
+### 📚 Additional Resources
 - **Schematic Diagrams**: [Circuit Diagrams](circuit-diagrams.md)
 - **Assembly Guide**: [Hardware Assembly](assembly.md)
 - **Build Video**: [🎬 YouTube Documentary](https://www.youtube.com/watch?v=PKzvHBzcGJ4)
 
 ---
 
-**💡 Tip**: Start with a breadboard prototype to verify all connections before committing to a permanent PCB or enclosure assembly.
+**💡 Tip**: Start with a breadboard prototype to verify all connections before committing to a permanent PCB or enclosure assembly. All 3D printable parts are available in the OnShape CAD document above.
 
 **⚠️ Important**: This BOM lists only electronic components actually used in the project. Costs are not provided as they vary significantly by supplier, region, and purchasing decisions. Always verify current pricing and component specifications before ordering.

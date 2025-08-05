@@ -15,7 +15,9 @@ Get your Smart Sit-Stand Desk Controller running with this setup guide.
 
 ## 🔧 Hardware Assembly
 
-Connect components according to the pin configuration in [Hardware Overview](../hardware/overview.md):
+Connect components according to the pin configuration in [Hardware Overview](../hardware/overview.md). 
+
+**📐 3D Printed Parts**: All enclosures, mounts, and brackets are available in fully open-source CAD format at [OnShape CAD Document](https://cad.onshape.com/documents/f9483c31494feda60f507100/w/67832ca84d886d2bfa4006b1/e/62aed646cd76d0a16e7ccfc5?renderMode=0&uiState=68916ac8ffbe3d6103e400d4).
 
 **Power Connections:**
 ```

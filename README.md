@@ -111,10 +111,12 @@ This project is part of the **[Micropython sit/stand smart table](https://github
 - **3.3V Regulator**: Powers all electronics from 12V  
 - **Custom PCB**: For component mounting and connections
 - **Connection Wires**: For linking components
+- **3D Printed Parts**: Custom enclosures and mounting solutions
 
 **Notes**: 
 - All electronics run on 3.3V (except motor which uses 12V)
 - Uses Pico W's internal pull-up resistors - no external resistors needed
+- **🎨 3D Models**: Full CAD files available at [OnShape CAD Document](https://cad.onshape.com/documents/f9483c31494feda60f507100/w/67832ca84d886d2bfa4006b1/e/62aed646cd76d0a16e7ccfc5?renderMode=0&uiState=68916ac8ffbe3d6103e400d4)
 
 ## 📍 Pin Configuration
 
