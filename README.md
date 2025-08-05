@@ -7,6 +7,8 @@
 
 A comprehensive and intelligent sit-stand desk controller built on Raspberry Pi Pico W, featuring WiFi connectivity, web API, and sophisticated safety mechanisms. Advanced collision detection with PCA is currently under development.
 
+![The controller!](image.png "Controller")
+
 🎬 **[Watch the Build Journey](https://www.youtube.com/watch?v=PKzvHBzcGJ4)** - Experience the development adventure and see the system in action
 
 ## 🌟 Features
