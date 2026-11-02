@@ -1,15 +1,11 @@
-# Smart Sit-Stand Desk Controller
+# Sit-stand desk controller on a Raspberry Pi Pico W
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%20Pico%20W-brightgreen)](https://www.raspberrypi.org/products/raspberry-pi-pico/)
-[![Language](https://img.shields.io/badge/language-MicroPython-blue)](https://micropython.org/)
-[![YouTube](https://img.shields.io/badge/YouTube-Build%20Video-red)](https://www.youtube.com/watch?v=PKzvHBzcGJ4)
+The firmware and hardware behind /MAIN: a broken manual IKEA Skarsta made to move on its own with a Pico W running MicroPython. H-bridge motor control, current and position sensing, an OLED and two encoders, Wi-Fi with a web interface and a REST API, preset heights, reminders, haptic feedback. Collision detection by principal component analysis is in progress.
 
-A comprehensive and intelligent sit-stand desk controller built on Raspberry Pi Pico W, featuring WiFi connectivity, web API, and sophisticated safety mechanisms. Advanced collision detection with PCA is currently under development.
+The video: [/MAIN — Motorising a broken IKEA Skarsta with a Pi Pico W](https://www.youtube.com/watch?v=PKzvHBzcGJ4)
+Everything I make, by path: [walior.it](https://walior.it/)
 
-![The controller!](image.png "Controller")
-
-🎬 **[Watch the Build Journey](https://www.youtube.com/watch?v=PKzvHBzcGJ4)** - Experience the development adventure and see the system in action
+![The controller](image.png "Controller")
 
 ## 🌟 Features
 
